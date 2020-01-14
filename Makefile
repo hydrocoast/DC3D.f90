@@ -9,15 +9,17 @@ REV := DC3D.f90
 EXIST = $(shell find . -name $(ORG))
 WGET = $(shell wget -O $(ORG) http://www.bosai.go.jp/study/application/dc3d/download/DC3Dfortran.txt)
 
-.PHONY: all test testorg so clean
+.PHONY: all clean
 
 all: obj
 
 obj:
 	$(FC) -c $(REV) -o $(REV).o
 
-org:
+getorg:
 	$(if $(EXIST), , $(WGET))
+
+org: getorg
 	$(FC) -c $(ORG) -o $(ORG).o
 
 test: obj
@@ -30,7 +32,7 @@ testorg: org
 
 so:
 	$(FC) $(REV) -o $(REV).so -fPIC -shared
-	$(if $(EXIST), , $(WGET))
+	$(getorg)
 	$(FC) $(ORG)   -o $(ORG).so   -fPIC -shared
 
 clean:
