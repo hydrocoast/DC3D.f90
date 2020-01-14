@@ -1,0 +1,13 @@
+*.o
+*.so
+*.mod
+*~
+*.swp
+*.out
+*.dat
+*.svg
+*.html
+tmp*
+x*
+DC3D.f
+!diffu*.svg
