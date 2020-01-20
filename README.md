@@ -30,7 +30,8 @@ Some of them need to be run with the Julia language.
 ```bash
 make so
 cd test
-julia plot_strike-dip-tensile.jl
+julia -q
+julia> include("./plot_strike-dip-tensile.jl")
 ```
 
 

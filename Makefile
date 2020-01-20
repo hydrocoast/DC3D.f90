@@ -30,9 +30,8 @@ testorg: org
 	$(FC) test/call.f  $(ORG).o -o xtest_org
 	./xtest_org
 
-so:
+so: getorg
 	$(FC) $(REV) -o $(REV).so -fPIC -shared
-	$(getorg)
 	$(FC) $(ORG)   -o $(ORG).so   -fPIC -shared
 
 clean:
