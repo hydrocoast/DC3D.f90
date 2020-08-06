@@ -7,7 +7,7 @@ REV := DC3D.f90
 
 # download the original file
 EXIST = $(shell find . -name $(ORG))
-WGET = $(shell wget -O $(ORG) http://www.bosai.go.jp/study/application/dc3d/download/DC3Dfortran.txt)
+WGET = $(shell wget -O $(ORG) https://www.bosai.go.jp/information/pdf/DC3Dfortran.txt)
 
 .PHONY: all clean
 
