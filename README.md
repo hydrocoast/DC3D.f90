@@ -1,7 +1,7 @@
 <p align="center">
-<img src="https://github.com/hydrocoast/DC3D.f90/blob/master/test/uxuyuz_strike-slip.png", width="275">
-<img src="https://github.com/hydrocoast/DC3D.f90/blob/master/test/uxuyuz_dip-slip.png", width="275">
-<img src="https://github.com/hydrocoast/DC3D.f90/blob/master/test/uxuyuz_tensile.png", width="275">
+<img src="https://github.com/hydrocoast/DC3D.f90/blob/master/test/uxuyuz_strike-slip.png", width="250">
+<img src="https://github.com/hydrocoast/DC3D.f90/blob/master/test/uxuyuz_dip-slip.png", width="250">
+<img src="https://github.com/hydrocoast/DC3D.f90/blob/master/test/uxuyuz_tensile.png", width="250">
 </p>  
 
 # DC3D0/DC3D Fortran
@@ -20,7 +20,7 @@ make obj
 The shared object can also be generated using `make so`.
 Note that a Fortran compiler (e.g. `ifort` and `gfortran`) and an environment variable `FC` are required to run these commands.  
 
-## Running the tests
+## Tests
 You can quickly test the codes as follows:
 ```bash
 make test
