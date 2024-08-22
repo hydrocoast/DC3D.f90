@@ -50,6 +50,6 @@ NIED also takes no responsibility for any damage and loss.
 
 ## Author
 Takuya Miyashita  
-Doctoral student, Kyoto University  
+Disaster Prevention Research Institute, Kyoto University  
 miyashita@hydrocoast.jp  
 http://hydrocoast.jp   
