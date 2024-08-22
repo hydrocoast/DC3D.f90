@@ -178,7 +178,7 @@ subroutine  UA0(X,Y,D,POT1,POT2,POT3,POT4,SD,CD,ALP,U)
     UZ=CD+F5*D*Q/R2   ! U' in Tab.5
     VY=S -F5*Y*P*Q/R2 ! V  in Tab.4
     VZ=T +F5*D*P*Q/R2 ! V' in Tab.5
-    WY=UY+SD          ! W  in Tab. 4
+    WY=UY+SD          ! W  in Tab.4
     WZ=UZ+CD          ! W' in Tab.5
 !-----
 !======================================
