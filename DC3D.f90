@@ -144,7 +144,7 @@ subroutine  uA0(x,y,d,pot1,pot2,pot3,pot4,sd,cd,alp,u)
     real*8 :: xy,x2,y2,d2,A3,A5,B3,C3
     real*8 :: uy,vy,wy,uz,vz,wz
     ! parameters
-    real*8, parameter :: pi2=6.283185307179586D0
+    real*8, parameter :: pi2=6.283185307179586d0
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F3=3.0d0, F5=5.0d0
     ! loop counter
     integer :: i
@@ -300,7 +300,7 @@ subroutine  uB0(x,y,d,z,pot1,pot2,pot3,pot4,sd,cd,alp,u)
     real*8 :: FJ1,FJ2,FJ3,FJ4
     real*8 :: FK1,FK2,FK3
     ! parameters
-    real*8, parameter :: pi2=6.283185307179586D0
+    real*8, parameter :: pi2=6.283185307179586d0
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F2=2.0d0, F3=3.0d0, F4=4.0d0, F5=5.0d0, F8=8.0d0, F9=9.0d0
     ! loop counter
     integer :: i
@@ -469,7 +469,7 @@ subroutine  uC0(x,y,d,z,pot1,pot2,pot3,pot4,sd,cd,alp,u)
     real*8 :: xy,x2,y2,d2,C
     real*8 :: A3,A5,A7,B3,B5,B7,C3,C5,C7,D7
     ! parameters
-    real*8, parameter :: pi2=6.283185307179586D0
+    real*8, parameter :: pi2=6.283185307179586d0
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F2=2.0d0, F3=3.0d0, F5=5.0d0, F7=7.0d0, F10=1.0d1, F15=1.5d1
     ! loop counter
     integer :: i
