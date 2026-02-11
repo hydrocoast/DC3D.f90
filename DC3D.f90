@@ -1,12 +1,12 @@
 !----------------------------------------------------------------------
-subroutine  DC3D0(ALPHA,X,Y,Z,DEPTH,DIP,POT1,POT2,POT3,POT4, &
-                  UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ,IRET)
+subroutine  DC3D0(alpha,x,y,z,depth,dip,pot1,pot2,pot3,pot4, &
+                  ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz,iret)
 !********************************************************************
 !*****                                                          *****
-!*****    DISPLACEMENT AND STRAIN AT DEPTH                      *****
-!*****    DUE TO BURIED POINT SOURCE IN A SEMIINFINITE MEDIUM   *****
-!*****                         CODED BY  Y.OKADA ... SEP.1991   *****
-!*****                         REVISED     NOV.1991, MAY.2002   *****
+!*****   displacement and strain at depth                       *****
+!*****   due to a buried point source in a semi-infinite medium *****
+!*****                         coded by  Y.Okada ... Sep.1991   *****
+!*****                         revised     Nov.1991, May.2002   *****
 !--------------------------------------------------------------------
 !-----                     converted to Fortran90 (free form)   -----
 !-----                                T. Miyashita, Jan. 2020   -----
@@ -14,1322 +14,1322 @@ subroutine  DC3D0(ALPHA,X,Y,Z,DEPTH,DIP,POT1,POT2,POT3,POT4, &
 !*****                                                          *****
 !********************************************************************
 !
-!***** INPUT
-!*****   ALPHA : MEDIUM CONSTANT  (LAMBDA+MYU)/(LAMBDA+2*MYU)
-!*****   X,Y,Z : COORDINATE OF OBSERVING POINT
-!*****   DEPTH : SOURCE DEPTH
-!*****   DIP   : DIP-ANGLE (DEGREE)
-!*****   POT1-POT4 : STRIKE-, DIP-, TENSILE- AND INFLATE-POTENCY
-!*****       POTENCY=(  MOMENT OF DOUBLE-COUPLE  )/MYU     FOR POT1,2
-!*****       POTENCY=(INTENSITY OF ISOTROPIC PART)/LAMBDA  FOR POT3
-!*****       POTENCY=(INTENSITY OF LINEAR DIPOLE )/MYU     FOR POT4
+!***** input
+!*****   alpha : medium constant  (lambda+myu)/(lambda+2*myu)
+!*****   x,y,z : coordinate of observing point
+!*****   depth : source depth
+!*****   dip   : dip-angle (degree)
+!*****   pot1-pot4 : strike-, dip-, tensile- and inflate-potency
+!*****       potency=(  moment of double-couple  )/myu     for pot1,2
+!*****       potency=(intensity of isotropic part)/lambda  for pot3
+!*****       potency=(intensity of linear dipole )/myu     for pot4
 !
-!***** OUTPUT
-!*****   UX, UY, UZ  : DISPLACEMENT ( UNIT=(UNIT OF POTENCY) /
-!*****               :                     (UNIT OF X,Y,Z,DEPTH)**2  )
-!*****   UXX,UYX,UZX : X-DERIVATIVE ( UNIT= UNIT OF POTENCY) /
-!*****   UXY,UYY,UZY : Y-DERIVATIVE        (UNIT OF X,Y,Z,DEPTH)**3  )
-!*****   UXZ,UYZ,UZZ : Z-DERIVATIVE
-!*****   IRET        : return CODE
-!*****               :   =0....NORMAL
-!*****               :   =1....SINGULAR
-!*****               :   =2....POSITIVE Z WAS GIVEN
+!***** output
+!*****   ux, uy, uz  : displacement ( unit=(unit of potency) /
+!*****               :                     (unit of x,y,z,depth)**2  )
+!*****   uxx,uyx,uzx : x-derivative ( unit= unit of potency) /
+!*****   uxy,uyy,uzy : y-derivative        (unit of x,y,z,depth)**3  )
+!*****   uxz,uyz,uzz : z-derivative
+!*****   iret        : return code
+!*****               :   =0....normal
+!*****               :   =1....singular
+!*****               :   =2....positive z was given
     implicit none
 
     ! arguments
-    real*8, intent(in) :: ALPHA,X,Y,Z,DEPTH,DIP,POT1,POT2,POT3,POT4
-    real*8, intent(out) :: UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ
-    integer, intent(out) :: IRET
+    real*8, intent(in) :: alpha,x,y,z,depth,dip,pot1,pot2,pot3,pot4
+    real*8, intent(out) :: ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz
+    integer, intent(out) :: iret
 
     ! local variables
-    real*8 :: ALP(5)
-    real*8 :: U(12),DUA(12),DUB(12),DUC(12)
-    real*8 :: DU
-    real*8 :: SD,CD,R
-    real*8 :: XX,YY,ZZ,DD
+    real*8 :: alp(5)
+    real*8 :: u(12),duA(12),duB(12),duC(12)
+    real*8 :: du
+    real*8 :: sd,cd,R
+    real*8 :: xx,yy,zz,dd
     ! parameters
-    real*8, parameter :: EPS=1.0d-6
+    real*8, parameter :: eps=1.0d-6
     ! loop counter
-    integer :: I
+    integer :: i
 
     ! initialization
-    U(1:12) = 0.0d0
-    DUA(1:12) = 0.0d0
-    DUB(1:12) = 0.0d0
-    DUC(1:12) = 0.0d0
-    call varout(U,UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ)
+    u(1:12) = 0.0d0
+    duA(1:12) = 0.0d0
+    duB(1:12) = 0.0d0
+    duC(1:12) = 0.0d0
+    call varout(u,ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz)
 
-!### CAUTION ### if X,Y,D ARE SUFFICIENTLY SMALL, THEY ARE SET TO ZERO
-    XX=X
-    YY=Y
-    ZZ=Z
-    DD=DEPTH+Z
-    if(dabs(XX)<EPS) XX=0.0d0
-    if(dabs(YY)<EPS) YY=0.0d0
-    if(dabs(DD)<EPS) DD=0.0d0
+!### caution ### if x,y,d are sufficiently small, they are set to zero
+    xx=x
+    yy=y
+    zz=z
+    dd=depth+z
+    if(dabs(xx)<eps) xx=0.0d0
+    if(dabs(yy)<eps) yy=0.0d0
+    if(dabs(dd)<eps) dd=0.0d0
 !-----
-    IRET=0
-    if(Z>0.0d0) then
-      IRET=2
+    iret=0
+    if(z>0.0d0) then
+      iret=2
       return
     endif
 !-----
-    R=dsqrt(XX*XX+YY*YY+DD*DD)
-    if (R==0.0d0) then !IN CASE OF SINGULAR (R=0)
-      IRET=1
+    R=dsqrt(xx*xx+yy*yy+dd*dd)
+    if (R==0.0d0) then !in case of singular (R=0)
+      iret=1
       return
     endif
 
 !**********************************************************************
-!*****   CALCULATE STATION GEOMETRY CONSTANTS FOR POINT SOURCE    *****
+!*****   calculate station geometry constants for point source    *****
 !**********************************************************************
-    call assign_alpha(ALPHA,ALP)
-    call DCCON0(DIP,SD,CD)
+    call assign_alpha(alpha,alp)
+    call dccon0(dip,sd,cd)
 !======================================
-!=====  REAL-SOURCE CONTRIBUTION  =====
+!=====  real-source contribution  =====
 !======================================
 !-----
-    call UA0(XX,YY,DD,POT1,POT2,POT3,POT4,SD,CD,ALP,DUA)
+    call uA0(xx,yy,dd,pot1,pot2,pot3,pot4,sd,cd,alp,duA)
 !-----
-    do 222 I=1,12
-      if(I<10) U(I)=U(I)-DUA(I)
-      if(I>=10) U(I)=U(I)+DUA(I)
+    do 222 i=1,12
+      if(i<10) u(i)=u(i)-duA(i)
+      if(i>=10) u(i)=u(i)+duA(i)
 222 enddo
 !=======================================
-!=====  IMAGE-SOURCE CONTRIBUTION  =====
+!=====  image-source contribution  =====
 !=======================================
-    DD=DEPTH-Z
-    call UA0(XX,YY,DD,POT1,POT2,POT3,POT4,SD,CD,ALP,DUA)
-    call UB0(XX,YY,DD,ZZ,POT1,POT2,POT3,POT4,SD,CD,ALP,DUB)
-    call UC0(XX,YY,DD,ZZ,POT1,POT2,POT3,POT4,SD,CD,ALP,DUC)
+    dd=depth-z
+    call uA0(xx,yy,dd,pot1,pot2,pot3,pot4,sd,cd,alp,duA)
+    call uB0(xx,yy,dd,zz,pot1,pot2,pot3,pot4,sd,cd,alp,duB)
+    call uC0(xx,yy,dd,zz,pot1,pot2,pot3,pot4,sd,cd,alp,duC)
 !-----
-    do 333 I=1,12
-      DU=DUA(I)+DUB(I)+ZZ*DUC(I)
-      if(I>=10) DU=DU+DUC(I-9)
-      U(I)=U(I)+DU
+    do 333 i=1,12
+      du=duA(i)+duB(i)+zz*duC(i)
+      if(i>=10) du=du+duC(i-9)
+      u(i)=u(i)+du
 333 enddo
 !=====
-    call varout(U,UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ)
+    call varout(u,ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz)
     return
 end subroutine DC3D0
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  UA0(X,Y,D,POT1,POT2,POT3,POT4,SD,CD,ALP,U)
+subroutine  uA0(x,y,d,pot1,pot2,pot3,pot4,sd,cd,alp,u)
 !********************************************************************
-!*****    DISPLACEMENT AND STRAIN AT DEPTH (PART-A)             *****
-!*****    DUE TO BURIED POINT SOURCE IN A SEMIINFINITE MEDIUM   *****
+!*****    displacement and strain at depth (part-A)             *****
+!*****    due to buried point source in a semi-infinite medium  *****
 !********************************************************************
 !
-!***** INPUT
-!*****   X,Y,D : STATION COORDINATES IN FAULT SYSTEM
-!*****   POT1-POT4 : STRIKE-, DIP-, TENSILE- AND INFLATE-POTENCY
-!***** OUTPUT
-!*****   U(12) : DISPLACEMENT AND THEIR DERIVATIVES
+!***** input
+!*****   x,y,d : station coordinates in fault system
+!*****   pot1-pot4 : strike-, dip-, tensile- and inflate-potency
+!***** output
+!*****   u(12) : displacement and their derivatives
     implicit none
 
     ! arguments
-    real*8, intent(in) :: X,Y,D
-    real*8, intent(in) :: POT1,POT2,POT3,POT4
-    real*8, intent(in) :: SD,CD
-    real*8, intent(in) :: ALP(5)
-    real*8, intent(out) :: U(12)
+    real*8, intent(in) :: x,y,d
+    real*8, intent(in) :: pot1,pot2,pot3,pot4
+    real*8, intent(in) :: sd,cd
+    real*8, intent(in) :: alp(5)
+    real*8, intent(out) :: u(12)
 
     ! local variables
-    real*8 :: DU(12)
-    real*8 :: P,Q,S,T
+    real*8 :: du(12)
+    real*8 :: p,q,s,t
     real*8 :: R, R2, R3, R5
-    real*8 :: S2D,C2D
-    real*8 :: QR,QRX
-    real*8 :: XY,X2,Y2,D2,A3,A5,B3,C3
-    real*8 :: UY,VY,WY,UZ,VZ,WZ
+    real*8 :: s2d,c2d
+    real*8 :: qR,qRx
+    real*8 :: xy,x2,y2,d2,A3,A5,B3,C3
+    real*8 :: uy,vy,wy,uz,vz,wz
     ! parameters
-    real*8, parameter :: PI2=6.283185307179586D0
+    real*8, parameter :: pi2=6.283185307179586D0
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F3=3.0d0, F5=5.0d0
     ! loop counter
-    integer :: I
+    integer :: i
 
-    U(1:12)=0.0d0
-    DU(1:12)=0.0d0
+    u(1:12)=0.0d0
+    du(1:12)=0.0d0
 
-    call DCCON1(X,Y,D,SD,CD,R,P,Q,S,T)
-    S2D=2.0d0*SD*CD
-    C2D=CD*CD-SD*SD
+    call dccon1(x,y,d,sd,cd,R,p,q,s,t)
+    s2d=2.0d0*sd*cd
+    c2d=cd*cd-sd*sd
 
-    XY=X*Y
-    X2=X*X
-    Y2=Y*Y
-    D2=D*D
+    xy=x*y
+    x2=x*x
+    y2=y*y
+    d2=d*d
 
     R2=R**2.0d0
     R3=R**3.0d0
     R5=R**5.0d0
-    QR=F3*Q/R5      ! 3q/(R^5)
-    QRX=F5*QR*X/R2  ! 15qx/(R^7)
+    qR=F3*q/R5      ! 3q/(R^5)
+    qRx=F5*qR*x/R2  ! 15qx/(R^7)
 
 ! -- Eq.(8), p.1024 --
-    A3=F1-F3*X2/R2
-    A5=F1-F5*X2/R2
-    B3=F1-F3*Y2/R2
-    C3=F1-F3*D2/R2
+    A3=F1-F3*x2/R2
+    A5=F1-F5*x2/R2
+    B3=F1-F3*y2/R2
+    C3=F1-F3*d2/R2
 !-----
     ! -- Tab.4 and 5, pp.1027-1028 --
-    UY=SD-F5*Y*Q/R2   ! U  in Tab.4
-    UZ=CD+F5*D*Q/R2   ! U' in Tab.5
-    VY=S -F5*Y*P*Q/R2 ! V  in Tab.4
-    VZ=T +F5*D*P*Q/R2 ! V' in Tab.5
-    WY=UY+SD          ! W  in Tab.4
-    WZ=UZ+CD          ! W' in Tab.5
+    uy=sd-F5*y*q/R2   ! U  in Tab.4
+    uz=cd+F5*d*q/R2   ! U' in Tab.5
+    vy=s -F5*y*p*q/R2 ! V  in Tab.4
+    vz=t +F5*d*p*q/R2 ! V' in Tab.5
+    vz=uy+sd          ! W  in Tab.4
+    wz=uz+cd          ! W' in Tab.5
 !-----
 !======================================
-!=====  STRIKE-SLIP CONTRIBUTION  =====
+!=====  strike-slip contribution  =====
 !======================================
-    if(POT1/=F0) then
-      DU( 1)= ALP(1)*Q/R3    +ALP(2)*X2*QR
-      DU( 2)= ALP(1)*X/R3*SD +ALP(2)*XY*QR
-      DU( 3)=-ALP(1)*X/R3*CD +ALP(2)*X*D*QR
-      DU( 4)= X*QR*(-ALP(1) +ALP(2)*(F1+A5) )
-      DU( 5)= ALP(1)*A3/R3*SD +ALP(2)*Y*QR*A5
-      DU( 6)=-ALP(1)*A3/R3*CD +ALP(2)*D*QR*A5
-      DU( 7)= ALP(1)*(SD/R3-Y*QR) +ALP(2)*F3*X2/R5*UY
-      DU( 8)= F3*X/R5*(-ALP(1)*Y*SD +ALP(2)*(Y*UY+Q) )
-      DU( 9)= F3*X/R5*( ALP(1)*Y*CD +ALP(2)*D*UY )
-      DU(10)= ALP(1)*(CD/R3+D*QR) +ALP(2)*F3*X2/R5*UZ
-      DU(11)= F3*X/R5*( ALP(1)*D*SD +ALP(2)*Y*UZ )
-      DU(12)= F3*X/R5*(-ALP(1)*D*CD +ALP(2)*(D*UZ-Q) )
-      do 222 I=1,12
-        U(I)=U(I)+POT1/PI2*DU(I)
+    if(pot1/=F0) then
+      du( 1)= alp(1)*q/R3    +alp(2)*x2*qR
+      du( 2)= alp(1)*x/R3*sd +alp(2)*xy*qR
+      du( 3)=-alp(1)*x/R3*cd +alp(2)*x*d*qR
+      du( 4)= x*qR*(-alp(1) +alp(2)*(F1+A5) )
+      du( 5)= alp(1)*A3/R3*sd +alp(2)*y*qR*A5
+      du( 6)=-alp(1)*A3/R3*cd +alp(2)*d*qR*A5
+      du( 7)= alp(1)*(sd/R3-y*qR) +alp(2)*F3*x2/R5*uy
+      du( 8)= F3*x/R5*(-alp(1)*y*sd +alp(2)*(y*uy+q) )
+      du( 9)= F3*x/R5*( alp(1)*y*cd +alp(2)*d*uy )
+      du(10)= alp(1)*(cd/R3+d*qR) +alp(2)*F3*x2/R5*uz
+      du(11)= F3*x/R5*( alp(1)*d*sd +alp(2)*y*uz )
+      du(12)= F3*x/R5*(-alp(1)*d*cd +alp(2)*(d*uz-q) )
+      do 222 i=1,12
+        u(i)=u(i)+pot1/pi2*du(i)
  222  enddo
     endif
 !===================================
-!=====  DIP-SLIP CONTRIBUTION  =====
+!=====  dip-slip contribution  =====
 !===================================
-    if(POT2/=F0) then
-      DU( 1)=              ALP(2)*X*P*QR
-      DU( 2)= ALP(1)*S/R3 +ALP(2)*Y*P*QR
-      DU( 3)=-ALP(1)*T/R3 +ALP(2)*D*P*QR
-      DU( 4)=              ALP(2)*P*QR*A5
-      DU( 5)=-ALP(1)*F3*X*S/R5 -ALP(2)*Y*P*QRX
-      DU( 6)= ALP(1)*F3*X*T/R5 -ALP(2)*D*P*QRX
-      DU( 7)=                            ALP(2)*F3*X/R5*VY
-      DU( 8)= ALP(1)*(S2D/R3-F3*Y*S/R5) +ALP(2)*(F3*Y/R5*VY+P*QR)
-      DU( 9)=-ALP(1)*(C2D/R3-F3*Y*T/R5) +ALP(2)*F3*D/R5*VY
-      DU(10)=                            ALP(2)*F3*X/R5*VZ
-      DU(11)= ALP(1)*(C2D/R3+F3*D*S/R5) +ALP(2)*F3*Y/R5*VZ
-      DU(12)= ALP(1)*(S2D/R3-F3*D*T/R5) +ALP(2)*(F3*D/R5*VZ-P*QR)
-      do 333 I=1,12
-        U(I)=U(I)+POT2/PI2*DU(I)
+    if(pot2/=F0) then
+      du( 1)=              alp(2)*x*p*qR
+      du( 2)= alp(1)*s/R3 +alp(2)*y*p*qR
+      du( 3)=-alp(1)*t/R3 +alp(2)*d*p*qR
+      du( 4)=              alp(2)*p*qR*A5
+      du( 5)=-alp(1)*F3*x*s/R5 -alp(2)*y*p*qRx
+      du( 6)= alp(1)*F3*x*t/R5 -alp(2)*d*p*qRx
+      du( 7)=                            alp(2)*F3*x/R5*vy
+      du( 8)= alp(1)*(s2d/R3-F3*y*s/R5) +alp(2)*(F3*y/R5*vy+p*qR)
+      du( 9)=-alp(1)*(c2d/R3-F3*y*t/R5) +alp(2)*F3*d/R5*vy
+      du(10)=                            alp(2)*F3*x/R5*vz
+      du(11)= alp(1)*(c2d/R3+F3*d*s/R5) +alp(2)*F3*y/R5*vz
+      du(12)= alp(1)*(s2d/R3-F3*d*t/R5) +alp(2)*(F3*d/R5*vz-p*qR)
+      do 333 i=1,12
+        u(i)=u(i)+pot2/pi2*du(i)
  333  enddo
     endif
 !========================================
-!=====  TENSILE-FAULT CONTRIBUTION  =====
+!=====  tensile-fault contribution  =====
 !========================================
-    if(POT3/=F0) then
-      DU( 1)= ALP(1)*X/R3      -ALP(2)*X*Q*QR
-      DU( 2)= ALP(1)*T/R3      -ALP(2)*Y*Q*QR
-      DU( 3)= ALP(1)*S/R3      -ALP(2)*D*Q*QR
-      DU( 4)= ALP(1)*A3/R3     -ALP(2)*Q*QR*A5
-      DU( 5)=-ALP(1)*F3*X*T/R5 +ALP(2)*Y*Q*QRX
-      DU( 6)=-ALP(1)*F3*X*S/R5 +ALP(2)*D*Q*QRX
-      DU( 7)=-ALP(1)*F3*XY/R5           -ALP(2)*X*QR*WY
-      DU( 8)= ALP(1)*(C2D/R3-F3*Y*T/R5) -ALP(2)*(Y*WY+Q)*QR
-      DU( 9)= ALP(1)*(S2D/R3-F3*Y*S/R5) -ALP(2)*D*QR*WY
-      DU(10)= ALP(1)*F3*X*D/R5          -ALP(2)*X*QR*WZ
-      DU(11)=-ALP(1)*(S2D/R3-F3*D*T/R5) -ALP(2)*Y*QR*WZ
-      DU(12)= ALP(1)*(C2D/R3+F3*D*S/R5) -ALP(2)*(D*WZ-Q)*QR
-      do 444 I=1,12
-        U(I)=U(I)+POT3/PI2*DU(I)
+    if(pot3/=F0) then
+      du( 1)= alp(1)*x/R3      -alp(2)*x*q*qR
+      du( 2)= alp(1)*t/R3      -alp(2)*y*q*qR
+      du( 3)= alp(1)*s/R3      -alp(2)*d*q*qR
+      du( 4)= alp(1)*A3/R3     -alp(2)*q*qR*A5
+      du( 5)=-alp(1)*F3*x*t/R5 +alp(2)*y*q*qRx
+      du( 6)=-alp(1)*F3*x*s/R5 +alp(2)*d*q*qRx
+      du( 7)=-alp(1)*F3*xy/R5           -alp(2)*x*qR*wy
+      du( 8)= alp(1)*(c2d/R3-F3*y*t/R5) -alp(2)*(y*wy+q)*qR
+      du( 9)= alp(1)*(s2d/R3-F3*y*s/R5) -alp(2)*d*qR*wy
+      du(10)= alp(1)*F3*x*d/R5          -alp(2)*x*qR*wz
+      du(11)=-alp(1)*(s2d/R3-F3*d*t/R5) -alp(2)*y*qR*wz
+      du(12)= alp(1)*(c2d/R3+F3*d*s/R5) -alp(2)*(d*wz-q)*qR
+      do 444 i=1,12
+        u(i)=u(i)+pot3/pi2*du(i)
  444  enddo
     endif
 !=========================================
-!=====  INFLATE SOURCE CONTRIBUTION  =====
+!=====  inflate source contribution  =====
 !=========================================
-    if(POT4/=F0) then
-      DU( 1)=-ALP(1)*X/R3
-      DU( 2)=-ALP(1)*Y/R3
-      DU( 3)=-ALP(1)*D/R3
-      DU( 4)=-ALP(1)*A3/R3
-      DU( 5)= ALP(1)*F3*XY/R5
-      DU( 6)= ALP(1)*F3*X*D/R5
-      DU( 7)= DU(5)
-      DU( 8)=-ALP(1)*B3/R3
-      DU( 9)= ALP(1)*F3*Y*D/R5
-      DU(10)=-DU(6)
-      DU(11)=-DU(9)
-      DU(12)= ALP(1)*C3/R3
-      do 555 I=1,12
-        U(I)=U(I)+POT4/PI2*DU(I)
+    if(pot4/=F0) then
+      du( 1)=-alp(1)*x/R3
+      du( 2)=-alp(1)*y/R3
+      du( 3)=-alp(1)*d/R3
+      du( 4)=-alp(1)*A3/R3
+      du( 5)= alp(1)*F3*xy/R5
+      du( 6)= alp(1)*F3*x*d/R5
+      du( 7)= du(5)
+      du( 8)=-alp(1)*B3/R3
+      du( 9)= alp(1)*F3*y*d/R5
+      du(10)=-du(6)
+      du(11)=-du(9)
+      du(12)= alp(1)*C3/R3
+      do 555 i=1,12
+        u(i)=u(i)+pot4/pi2*du(i)
  555  enddo
     endif
     return
-end subroutine  UA0
+end subroutine  uA0
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  UB0(X,Y,D,Z,POT1,POT2,POT3,POT4,SD,CD,ALP,U)
+subroutine  uB0(x,y,d,z,pot1,pot2,pot3,pot4,sd,cd,alp,u)
 !********************************************************************
-!*****    DISPLACEMENT AND STRAIN AT DEPTH (PART-B)             *****
-!*****    DUE TO BURIED POINT SOURCE IN A SEMIINFINITE MEDIUM   *****
+!*****    displacement and strain at depth (part-B)             *****
+!*****    due to buried point source in a semi-infinite medium  *****
 !********************************************************************
 !
-!***** INPUT
-!*****   X,Y,D,Z : STATION COORDINATES IN FAULT SYSTEM
-!*****   POT1-POT4 : STRIKE-, DIP-, TENSILE- AND INFLATE-POTENCY
-!***** OUTPUT
-!*****   U(12) : DISPLACEMENT AND THEIR DERIVATIVES
+!***** input
+!*****   x,y,d,z : station coordinates in fault system
+!*****   pot1-pot4 : strike-, dip-, tensile- and inflate-potency
+!***** output
+!*****   u(12) : displacement and their derivatives
     implicit none
 
     ! arguments
-    real*8, intent(in) :: X,Y,D,Z
-    real*8, intent(in) :: POT1,POT2,POT3,POT4
-    real*8, intent(in) :: SD,CD
-    real*8, intent(in) :: ALP(5)
-    real*8, intent(out) :: U(12)
+    real*8, intent(in) :: x,y,d,z
+    real*8, intent(in) :: pot1,pot2,pot3,pot4
+    real*8, intent(in) :: sd,cd
+    real*8, intent(in) :: alp(5)
+    real*8, intent(out) :: u(12)
 
 
     ! local variables
-    real*8 :: DU(12)
-    real*8 :: P,Q,S,T
+    real*8 :: du(12)
+    real*8 :: p,q,s,t
     real*8 :: R, R2, R3, R5
-    real*8 :: QR,QRX
-    real*8 :: XY,X2,Y2,D2,A3,A5,B3,C3
-    real*8 :: UY,VY,WY,UZ,VZ,WZ
-    real*8 :: C,RD
+    real*8 :: qR,qRx
+    real*8 :: xy,x2,y2,d2,A3,A5,B3,C3
+    real*8 :: uy,vy,wy,uz,vz,wz
+    real*8 :: C,Rd
     real*8 :: D12,D32,D33,D53,D54
     real*8 :: FI1,FI2,FI3,FI4,FI5
     real*8 :: FJ1,FJ2,FJ3,FJ4
     real*8 :: FK1,FK2,FK3
     ! parameters
-    real*8, parameter :: PI2=6.283185307179586D0
+    real*8, parameter :: pi2=6.283185307179586D0
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F2=2.0d0, F3=3.0d0, F4=4.0d0, F5=5.0d0, F8=8.0d0, F9=9.0d0
     ! loop counter
-    integer :: I
+    integer :: i
 
-    DU(1:12)=0.0d0
-    U(1:12)=0.0d0
+    du(1:12)=0.0d0
+    u(1:12)=0.0d0
 
-    call DCCON1(X,Y,D,SD,CD,R,P,Q,S,T)
-    XY=X*Y
-    X2=X*X
-    Y2=Y*Y
-    D2=D*D
+    call dccon1(x,y,d,sd,cd,R,p,q,s,t)
+    xy=x*y
+    x2=x*x
+    y2=y*y
+    d2=d*d
 
     R2=R**2.0d0
     R3=R**3.0d0
     R5=R**5.0d0
-    QR=F3*Q/R5      ! 3q/(R^5)
-    QRX=F5*QR*X/R2  ! 15qx/(R^7)
+    qR=F3*q/R5      ! 3q/(R^5)
+    qRx=F5*qR*x/R2  ! 15qx/(R^7)
 
 ! -- Eq.(8), p.1024 --
-    A3=F1-F3*X2/R2
-    A5=F1-F5*X2/R2
-    B3=F1-F3*Y2/R2
-    C3=F1-F3*D2/R2
+    A3=F1-F3*x2/R2
+    A5=F1-F5*x2/R2
+    B3=F1-F3*y2/R2
+    C3=F1-F3*d2/R2
 !-----
     ! -- Tab.4 and 5, pp.1027-1028 --
-    UY=SD-F5*Y*Q/R2   ! U  in Tab.4
-    UZ=CD+F5*D*Q/R2   ! U' in Tab.5
-    VY=S -F5*Y*P*Q/R2 ! V  in Tab.4
-    VZ=T +F5*D*P*Q/R2 ! V' in Tab.5
-    WY=UY+SD          ! W  in Tab. 4
-    WZ=UZ+CD          ! W' in Tab.5
+    uy=sd-F5*y*q/R2   ! u  in Tab.4
+    uz=cd+F5*d*q/R2   ! u' in Tab.5
+    vy=s -F5*y*p*q/R2 ! V  in Tab.4
+    vz=t +F5*d*p*q/R2 ! V' in Tab.5
+    wy=uy+sd          ! W  in Tab. 4
+    wz=uz+cd          ! W' in Tab.5
 !-----
-    C=D+Z
-    RD=R+D
-    D12=F1/(R*RD*RD)
-    D32=D12*(F2*R+D)/R2
-    D33=D12*(F3*R+D)/(R2*RD)
-    D53=D12*(F8*R2+F9*R*D+F3*D2)/(R2*R2*RD)
-    D54=D12*(F5*R2+F4*R*D+D2)/R3*D12
+    C=d+z
+    Rd=R+d
+    D12=F1/(R*Rd*Rd)
+    D32=D12*(F2*R+d)/R2
+    D33=D12*(F3*R+d)/(R2*Rd)
+    D53=D12*(F8*R2+F9*R*d+F3*d2)/(R2*R2*Rd)
+    D54=D12*(F5*R2+F4*R*d+d2)/R3*D12
 !-----
-    FI1= Y*(D12-X2*D33)
-    FI2= X*(D12-Y2*D33)
-    FI3= X/R3-FI2
-    FI4=-XY*D32
-    FI5= F1/(R*RD)-X2*D32
-    FJ1=-F3*XY*(D33-X2*D54)
-    FJ2= F1/R3-F3*D12+F3*X2*Y2*D54
+    FI1= y*(D12-x2*D33)
+    FI2= x*(D12-y2*D33)
+    FI3= x/R3-FI2
+    FI4=-xy*D32
+    FI5= F1/(R*Rd)-x2*D32
+    FJ1=-F3*xy*(D33-x2*D54)
+    FJ2= F1/R3-F3*D12+F3*x2*y2*D54
     FJ3= A3/R3-FJ2
-    FJ4=-F3*XY/R5-FJ1
-    FK1=-Y*(D32-X2*D53)
-    FK2=-X*(D32-Y2*D53)
-    FK3=-F3*X*D/R5-FK2
+    FJ4=-F3*xy/R5-FJ1
+    FK1=-y*(D32-x2*D53)
+    FK2=-x*(D32-y2*D53)
+    FK3=-F3*x*d/R5-FK2
 !-----
 !======================================
-!=====  STRIKE-SLIP CONTRIBUTION  =====
+!=====  strike-slip contribution  =====
 !======================================
-    if(POT1/=F0) then
-      DU( 1)=-X2*QR  -ALP(3)*FI1*SD
-      DU( 2)=-XY*QR  -ALP(3)*FI2*SD
-      DU( 3)=-C*X*QR -ALP(3)*FI4*SD
-      DU( 4)=-X*QR*(F1+A5) -ALP(3)*FJ1*SD
-      DU( 5)=-Y*QR*A5      -ALP(3)*FJ2*SD
-      DU( 6)=-C*QR*A5      -ALP(3)*FK1*SD
-      DU( 7)=-F3*X2/R5*UY      -ALP(3)*FJ2*SD
-      DU( 8)=-F3*XY/R5*UY-X*QR -ALP(3)*FJ4*SD
-      DU( 9)=-F3*C*X/R5*UY     -ALP(3)*FK2*SD
-      DU(10)=-F3*X2/R5*UZ  +ALP(3)*FK1*SD
-      DU(11)=-F3*XY/R5*UZ  +ALP(3)*FK2*SD
-      DU(12)= F3*X/R5*(-C*UZ +ALP(3)*Y*SD)
-      do 222 I=1,12
-        U(I)=U(I)+POT1/PI2*DU(I)
+    if(pot1/=F0) then
+      du( 1)=-x2*qR  -alp(3)*FI1*sd
+      du( 2)=-xy*qR  -alp(3)*FI2*sd
+      du( 3)=-C*x*qR -alp(3)*FI4*sd
+      du( 4)=-x*qR*(F1+A5) -alp(3)*FJ1*sd
+      du( 5)=-y*qR*A5      -alp(3)*FJ2*sd
+      du( 6)=-C*qR*A5      -alp(3)*FK1*sd
+      du( 7)=-F3*x2/R5*uy      -alp(3)*FJ2*sd
+      du( 8)=-F3*xy/R5*uy-x*qR -alp(3)*FJ4*sd
+      du( 9)=-F3*C*x/R5*uy     -alp(3)*FK2*sd
+      du(10)=-F3*x2/R5*uz  +alp(3)*FK1*sd
+      du(11)=-F3*xy/R5*uz  +alp(3)*FK2*sd
+      du(12)= F3*x/R5*(-C*uz +alp(3)*y*sd)
+      do 222 i=1,12
+        u(i)=u(i)+pot1/pi2*du(i)
  222  enddo
     endif
 !===================================
-!=====  DIP-SLIP CONTRIBUTION  =====
+!=====  dip-slip contribution  =====
 !===================================
-    if(POT2/=F0) then
-      DU( 1)=-X*P*QR          +ALP(3)*FI3*SD*CD
-      DU( 2)=-Y*P*QR          +ALP(3)*FI1*SD*CD
-      DU( 3)=-C*P*QR          +ALP(3)*FI5*SD*CD
-      DU( 4)=-P*QR*A5         +ALP(3)*FJ3*SD*CD
-      DU( 5)= Y*P*QRX         +ALP(3)*FJ1*SD*CD
-      DU( 6)= C*P*QRX         +ALP(3)*FK3*SD*CD
-      DU( 7)=-F3*X/R5*VY      +ALP(3)*FJ1*SD*CD
-      DU( 8)=-F3*Y/R5*VY-P*QR +ALP(3)*FJ2*SD*CD
-      DU( 9)=-F3*C/R5*VY      +ALP(3)*FK1*SD*CD
-      DU(10)=-F3*X/R5*VZ      -ALP(3)*FK3*SD*CD
-      DU(11)=-F3*Y/R5*VZ      -ALP(3)*FK1*SD*CD
-      DU(12)=-F3*C/R5*VZ      +ALP(3)*A3/R3*SD*CD
-      do 333 I=1,12
-        U(I)=U(I)+POT2/PI2*DU(I)
+    if(pot2/=F0) then
+      du( 1)=-x*p*qR          +alp(3)*FI3*sd*cd
+      du( 2)=-y*p*qR          +alp(3)*FI1*sd*cd
+      du( 3)=-C*p*qR          +alp(3)*FI5*sd*cd
+      du( 4)=-p*qR*A5         +alp(3)*FJ3*sd*cd
+      du( 5)= y*p*qRx         +alp(3)*FJ1*sd*cd
+      du( 6)= C*p*qRx         +alp(3)*FK3*sd*cd
+      du( 7)=-F3*x/R5*vy      +alp(3)*FJ1*sd*cd
+      du( 8)=-F3*y/R5*vy-p*qR +alp(3)*FJ2*sd*cd
+      du( 9)=-F3*C/R5*vy      +alp(3)*FK1*sd*cd
+      du(10)=-F3*x/R5*vz      -alp(3)*FK3*sd*cd
+      du(11)=-F3*y/R5*vz      -alp(3)*FK1*sd*cd
+      du(12)=-F3*C/R5*vz      +alp(3)*A3/R3*sd*cd
+      do 333 i=1,12
+        u(i)=u(i)+pot2/pi2*du(i)
  333  enddo
     endif
 !========================================
-!=====  TENSILE-FAULT CONTRIBUTION  =====
+!=====  tensile-fault contribution  =====
 !========================================
-    if(POT3/=F0) then
-      DU( 1)= X*Q*QR      -ALP(3)*FI3*SD*SD
-      DU( 2)= Y*Q*QR      -ALP(3)*FI1*SD*SD
-      DU( 3)= C*Q*QR      -ALP(3)*FI5*SD*SD
-      DU( 4)= Q*QR*A5     -ALP(3)*FJ3*SD*SD
-      DU( 5)=-Y*Q*QRX     -ALP(3)*FJ1*SD*SD
-      DU( 6)=-C*Q*QRX     -ALP(3)*FK3*SD*SD
-      DU( 7)= X*QR*WY     -ALP(3)*FJ1*SD*SD
-      DU( 8)= QR*(Y*WY+Q) -ALP(3)*FJ2*SD*SD
-      DU( 9)= C*QR*WY     -ALP(3)*FK1*SD*SD
-      DU(10)= X*QR*WZ     +ALP(3)*FK3*SD*SD
-      DU(11)= Y*QR*WZ     +ALP(3)*FK1*SD*SD
-      DU(12)= C*QR*WZ     -ALP(3)*A3/R3*SD*SD
-      do 444 I=1,12
-        U(I)=U(I)+POT3/PI2*DU(I)
+    if(pot3/=F0) then
+      du( 1)= x*q*qR      -alp(3)*FI3*sd*sd
+      du( 2)= y*q*qR      -alp(3)*FI1*sd*sd
+      du( 3)= C*q*qR      -alp(3)*FI5*sd*sd
+      du( 4)= q*qR*A5     -alp(3)*FJ3*sd*sd
+      du( 5)=-y*q*qRx     -alp(3)*FJ1*sd*sd
+      du( 6)=-C*q*qRx     -alp(3)*FK3*sd*sd
+      du( 7)= x*qR*wy     -alp(3)*FJ1*sd*sd
+      du( 8)= qR*(y*wy+q) -alp(3)*FJ2*sd*sd
+      du( 9)= C*qR*wy     -alp(3)*FK1*sd*sd
+      du(10)= x*qR*wz     +alp(3)*FK3*sd*sd
+      du(11)= y*qR*wz     +alp(3)*FK1*sd*sd
+      du(12)= C*qR*wz     -alp(3)*A3/R3*sd*sd
+      do 444 i=1,12
+        u(i)=u(i)+pot3/pi2*du(i)
  444  enddo
     endif
 !=========================================
-!=====  INFLATE SOURCE CONTRIBUTION  =====
+!=====  inflate source contribution  =====
 !=========================================
-    if(POT4/=F0) then
-      DU( 1)= ALP(3)*X/R3
-      DU( 2)= ALP(3)*Y/R3
-      DU( 3)= ALP(3)*D/R3
-      DU( 4)= ALP(3)*A3/R3
-      DU( 5)=-ALP(3)*F3*XY/R5
-      DU( 6)=-ALP(3)*F3*X*D/R5
-      DU( 7)= DU(5)
-      DU( 8)= ALP(3)*B3/R3
-      DU( 9)=-ALP(3)*F3*Y*D/R5
-      DU(10)=-DU(6)
-      DU(11)=-DU(9)
-      DU(12)=-ALP(3)*C3/R3
-      do 555 I=1,12
-        U(I)=U(I)+POT4/PI2*DU(I)
+    if(pot4/=F0) then
+      du( 1)= alp(3)*x/R3
+      du( 2)= alp(3)*y/R3
+      du( 3)= alp(3)*d/R3
+      du( 4)= alp(3)*A3/R3
+      du( 5)=-alp(3)*F3*xy/R5
+      du( 6)=-alp(3)*F3*x*d/R5
+      du( 7)= du(5)
+      du( 8)= alp(3)*B3/R3
+      du( 9)=-alp(3)*F3*y*d/R5
+      du(10)=-du(6)
+      du(11)=-du(9)
+      du(12)=-alp(3)*C3/R3
+      do 555 i=1,12
+        u(i)=u(i)+pot4/pi2*du(i)
  555  enddo
     endif
     return
-end subroutine UB0
+end subroutine uB0
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  UC0(X,Y,D,Z,POT1,POT2,POT3,POT4,SD,CD,ALP,U)
+subroutine  uC0(x,y,d,z,pot1,pot2,pot3,pot4,sd,cd,alp,u)
 !********************************************************************
-!*****    DISPLACEMENT AND STRAIN AT DEPTH (PART-B)             *****
-!*****    DUE TO BURIED POINT SOURCE IN A SEMIINFINITE MEDIUM   *****
+!*****    displacement and strain at depth (part-B)             *****
+!*****    due to buried point source in a semi-infinite medium  *****
 !********************************************************************
 !
-!***** INPUT
-!*****   X,Y,D,Z : STATION COORDINATES IN FAULT SYSTEM
-!*****   POT1-POT4 : STRIKE-, DIP-, TENSILE- AND INFLATE-POTENCY
-!***** OUTPUT
-!*****   U(12) : DISPLACEMENT AND THEIR DERIVATIVES
+!***** input
+!*****   x,y,d,z : station coordinates in fault system
+!*****   pot1-pot4 : strike-, dip-, tensile- and inflate-potency
+!***** output
+!*****   u(12) : displacement and their derivatives
     implicit none
 
     ! arguments
-    real*8, intent(in) :: X,Y,D,Z
-    real*8, intent(in) :: POT1,POT2,POT3,POT4
-    real*8, intent(in) :: SD,CD
-    real*8, intent(in) :: ALP(5)
-    real*8, intent(out) :: U(12)
+    real*8, intent(in) :: x,y,d,z
+    real*8, intent(in) :: pot1,pot2,pot3,pot4
+    real*8, intent(in) :: sd,cd
+    real*8, intent(in) :: alp(5)
+    real*8, intent(out) :: u(12)
 
     ! local variables
-    real*8 :: DU(12)
-    real*8 :: P,Q,S,T
+    real*8 :: du(12)
+    real*8 :: p,q,s,t
     real*8 :: R, R2, R3, R5, R7
-    real*8 :: S2D,C2D
-    real*8 :: Q2,QR,QRX,QR5,QR7,DR5
-    real*8 :: XY,X2,Y2,D2,C
+    real*8 :: s2d,c2d
+    real*8 :: q2,qR,qRx,QR5,QR7,DR5
+    real*8 :: xy,x2,y2,d2,C
     real*8 :: A3,A5,A7,B3,B5,B7,C3,C5,C7,D7
     ! parameters
-    real*8, parameter :: PI2=6.283185307179586D0
+    real*8, parameter :: pi2=6.283185307179586D0
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F2=2.0d0, F3=3.0d0, F5=5.0d0, F7=7.0d0, F10=1.0d1, F15=1.5d1
     ! loop counter
-    integer :: I
+    integer :: i
 
-    U(1:12)=0.0d0
-    DU(1:12)=0.0d0
+    u(1:12)=0.0d0
+    du(1:12)=0.0d0
 
-    call DCCON1(X,Y,D,SD,CD,R,P,Q,S,T)
-    XY=X*Y
-    X2=X*X
-    Y2=Y*Y
-    D2=D*D
+    call dccon1(x,y,d,sd,cd,R,p,q,s,t)
+    xy=x*y
+    x2=x*x
+    y2=y*y
+    d2=d*d
 
     R2=R**2.0d0
     R3=R**3.0d0
     R5=R**5.0d0
-    QR=F3*Q/R5      ! 3q/(R^5)
-    QRX=F5*QR*X/R2  ! 15qx/(R^7)
+    qR=F3*q/R5      ! 3q/(R^5)
+    qRx=F5*qR*x/R2  ! 15qx/(R^7)
 
 ! -- Eq.(8), p.1024 --
-    A3=F1-F3*X2/R2
-    A5=F1-F5*X2/R2
-    B3=F1-F3*Y2/R2
-    C3=F1-F3*D2/R2
+    A3=F1-F3*x2/R2
+    A5=F1-F5*x2/R2
+    B3=F1-F3*y2/R2
+    C3=F1-F3*d2/R2
 !-----
-    S2D=2.0d0*SD*CD
-    C2D=CD*CD-SD*SD
+    s2d=2.0d0*sd*cd
+    c2d=cd*cd-sd*sd
 !-----
-    C=D+Z
-    Q2=Q*Q
+    C=d+z
+    q2=q*q
     R7=R5*R2
-    A7=F1-F7*X2/R2
-    B5=F1-F5*Y2/R2
-    B7=F1-F7*Y2/R2
-    C5=F1-F5*D2/R2
-    C7=F1-F7*D2/R2
-    D7=F2-F7*Q2/R2
-    QR5=F5*Q/R2
-    QR7=F7*Q/R2
-    DR5=F5*D/R2
+    A7=F1-F7*x2/R2
+    B5=F1-F5*y2/R2
+    B7=F1-F7*y2/R2
+    C5=F1-F5*d2/R2
+    C7=F1-F7*d2/R2
+    D7=F2-F7*q2/R2
+    QR5=F5*q/R2
+    QR7=F7*q/R2
+    DR5=F5*d/R2
 !-----
 !======================================
-!=====  STRIKE-SLIP CONTRIBUTION  =====
+!=====  strike-slip contribution  =====
 !======================================
-    if(POT1/=F0) then
-      DU( 1)=-ALP(4)*A3/R3*CD  +ALP(5)*C*QR*A5
-      DU( 2)= F3*X/R5*( ALP(4)*Y*CD +ALP(5)*C*(SD-Y*QR5) )
-      DU( 3)= F3*X/R5*(-ALP(4)*Y*SD +ALP(5)*C*(CD+D*QR5) )
-      DU( 4)= ALP(4)*F3*X/R5*(F2+A5)*CD   -ALP(5)*C*QRX*(F2+A7)
-      DU( 5)= F3/R5*( ALP(4)*Y*A5*CD +ALP(5)*C*(A5*SD-Y*QR5*A7) )
-      DU( 6)= F3/R5*(-ALP(4)*Y*A5*SD +ALP(5)*C*(A5*CD+D*QR5*A7) )
-      DU( 7)= DU(5)
-      DU( 8)= F3*X/R5*( ALP(4)*B5*CD -ALP(5)*F5*C/R2*(F2*Y*SD+Q*B7) )
-      DU( 9)= F3*X/R5*(-ALP(4)*B5*SD +ALP(5)*F5*C/R2*(D*B7*SD-Y*C7*CD) )
-      DU(10)= F3/R5*   (-ALP(4)*D*A5*CD +ALP(5)*C*(A5*CD+D*QR5*A7) )
-      DU(11)= F15*X/R7*( ALP(4)*Y*D*CD  +ALP(5)*C*(D*B7*SD-Y*C7*CD) )
-      DU(12)= F15*X/R7*(-ALP(4)*Y*D*SD  +ALP(5)*C*(F2*D*CD-Q*C7) )
-      do 222 I=1,12
-        U(I)=U(I)+POT1/PI2*DU(I)
+    if(pot1/=F0) then
+      du( 1)=-alp(4)*A3/R3*cd  +alp(5)*C*qR*A5
+      du( 2)= F3*x/R5*( alp(4)*y*cd +alp(5)*C*(sd-y*QR5) )
+      du( 3)= F3*x/R5*(-alp(4)*y*sd +alp(5)*C*(cd+d*QR5) )
+      du( 4)= alp(4)*F3*x/R5*(F2+A5)*cd   -alp(5)*C*qRx*(F2+A7)
+      du( 5)= F3/R5*( alp(4)*y*A5*cd +alp(5)*C*(A5*sd-y*QR5*A7) )
+      du( 6)= F3/R5*(-alp(4)*y*A5*sd +alp(5)*C*(A5*cd+d*QR5*A7) )
+      du( 7)= du(5)
+      du( 8)= F3*x/R5*( alp(4)*B5*cd -alp(5)*F5*C/R2*(F2*y*sd+q*B7) )
+      du( 9)= F3*x/R5*(-alp(4)*B5*sd +alp(5)*F5*C/R2*(d*B7*sd-y*C7*cd) )
+      du(10)= F3/R5*   (-alp(4)*d*A5*cd +alp(5)*C*(A5*cd+d*QR5*A7) )
+      du(11)= F15*x/R7*( alp(4)*y*d*cd  +alp(5)*C*(d*B7*sd-y*C7*cd) )
+      du(12)= F15*x/R7*(-alp(4)*y*d*sd  +alp(5)*C*(F2*d*cd-q*C7) )
+      do 222 i=1,12
+        u(i)=u(i)+pot1/pi2*du(i)
  222  enddo
     endif
 !===================================
-!=====  DIP-SLIP CONTRIBUTION  =====
+!=====  dip-slip contribution  =====
 !===================================
-    if(POT2/=F0) then
-      DU( 1)= ALP(4)*F3*X*T/R5          -ALP(5)*C*P*QRX
-      DU( 2)=-ALP(4)/R3*(C2D-F3*Y*T/R2) +ALP(5)*F3*C/R5*(S-Y*P*QR5)
-      DU( 3)=-ALP(4)*A3/R3*SD*CD        +ALP(5)*F3*C/R5*(T+D*P*QR5)
-      DU( 4)= ALP(4)*F3*T/R5*A5              -ALP(5)*F5*C*P*QR/R2*A7
-      DU( 5)= F3*X/R5*(ALP(4)*(C2D-F5*Y*T/R2)-ALP(5)*F5*C/R2*(S-Y*P*QR7))
-      DU( 6)= F3*X/R5*(ALP(4)*(F2+A5)*SD*CD  -ALP(5)*F5*C/R2*(T+D*P*QR7))
-      DU( 7)= DU(5)
-      DU( 8)= F3/R5*( ALP(4)*(F2*Y*C2D+T*B5) &
-                     +ALP(5)*C*(S2D-F10*Y*S/R2-P*QR5*B7))
-      DU( 9)= F3/R5*(ALP(4)*Y*A5*SD*CD-ALP(5)*C*((F3+A5)*C2D+Y*P*DR5*QR7))
-      DU(10)= F3*X/R5*(-ALP(4)*(S2D-T*DR5) -ALP(5)*F5*C/R2*(T+D*P*QR7))
-      DU(11)= F3/R5*(-ALP(4)*(D*B5*C2D+Y*C5*S2D) &
-                     -ALP(5)*C*((F3+A5)*C2D+Y*P*DR5*QR7))
-      DU(12)= F3/R5*(-ALP(4)*D*A5*SD*CD-ALP(5)*C*(S2D-F10*D*T/R2+P*QR5*C7))
-      do 333 I=1,12
-        U(I)=U(I)+POT2/PI2*DU(I)
+    if(pot2/=F0) then
+      du( 1)= alp(4)*F3*x*t/R5          -alp(5)*C*p*qRx
+      du( 2)=-alp(4)/R3*(c2d-F3*y*t/R2) +alp(5)*F3*C/R5*(s-y*p*QR5)
+      du( 3)=-alp(4)*A3/R3*sd*cd        +alp(5)*F3*C/R5*(t+d*p*QR5)
+      du( 4)= alp(4)*F3*t/R5*A5              -alp(5)*F5*C*p*qR/R2*A7
+      du( 5)= F3*x/R5*(alp(4)*(c2d-F5*y*t/R2)-alp(5)*F5*C/R2*(s-y*p*QR7))
+      du( 6)= F3*x/R5*(alp(4)*(F2+A5)*sd*cd  -alp(5)*F5*C/R2*(t+d*p*QR7))
+      du( 7)= du(5)
+      du( 8)= F3/R5*( alp(4)*(F2*y*c2d+t*B5) &
+                     +alp(5)*C*(s2d-F10*y*s/R2-p*QR5*B7))
+      du( 9)= F3/R5*(alp(4)*y*A5*sd*cd-alp(5)*C*((F3+A5)*c2d+y*p*DR5*QR7))
+      du(10)= F3*x/R5*(-alp(4)*(s2d-t*DR5) -alp(5)*F5*C/R2*(t+d*p*QR7))
+      du(11)= F3/R5*(-alp(4)*(d*B5*c2d+y*C5*s2d) &
+                     -alp(5)*C*((F3+A5)*c2d+y*p*DR5*QR7))
+      du(12)= F3/R5*(-alp(4)*d*A5*sd*cd-alp(5)*C*(s2d-F10*d*t/R2+p*QR5*C7))
+      do 333 i=1,12
+        u(i)=u(i)+pot2/pi2*du(i)
  333  enddo
     endif
 !========================================
-!=====  TENSILE-FAULT CONTRIBUTION  =====
+!=====  tensile-fault contribution  =====
 !========================================
-    if(POT3/=F0) then
-      DU( 1)= F3*X/R5*(-ALP(4)*S +ALP(5)*(C*Q*QR5-Z))
-      DU( 2)= ALP(4)/R3*(S2D-F3*Y*S/R2)+ALP(5)*F3/R5*(C*(T-Y+Y*Q*QR5)-Y*Z)
-      DU( 3)=-ALP(4)/R3*(F1-A3*SD*SD)  -ALP(5)*F3/R5*(C*(S-D+D*Q*QR5)-D*Z)
-      DU( 4)=-ALP(4)*F3*S/R5*A5 +ALP(5)*(C*QR*QR5*A7-F3*Z/R5*A5)
-      DU( 5)= F3*X/R5*(-ALP(4)*(S2D-F5*Y*S/R2) &
-                       -ALP(5)*F5/R2*(C*(T-Y+Y*Q*QR7)-Y*Z))
-      DU( 6)= F3*X/R5*( ALP(4)*(F1-(F2+A5)*SD*SD) &
-                       +ALP(5)*F5/R2*(C*(S-D+D*Q*QR7)-D*Z))
-      DU( 7)= DU(5)
-      DU( 8)= F3/R5*(-ALP(4)*(F2*Y*S2D+S*B5) &
-                     -ALP(5)*(C*(F2*SD*SD+F10*Y*(T-Y)/R2-Q*QR5*B7)+Z*B5))
-      DU( 9)= F3/R5*( ALP(4)*Y*(F1-A5*SD*SD) &
-                     +ALP(5)*(C*(F3+A5)*S2D-Y*DR5*(C*D7+Z)))
-      DU(10)= F3*X/R5*(-ALP(4)*(C2D+S*DR5) &
-                       +ALP(5)*(F5*C/R2*(S-D+D*Q*QR7)-F1-Z*DR5))
-      DU(11)= F3/R5*( ALP(4)*(D*B5*S2D-Y*C5*C2D) &
-                     +ALP(5)*(C*((F3+A5)*S2D-Y*DR5*D7)-Y*(F1+Z*DR5)))
-      DU(12)= F3/R5*(-ALP(4)*D*(F1-A5*SD*SD) &
-                     -ALP(5)*(C*(C2D+F10*D*(S-D)/R2-Q*QR5*C7)+Z*(F1+C5)))
-      do 444 I=1,12
-        U(I)=U(I)+POT3/PI2*DU(I)
+    if(pot3/=F0) then
+      du( 1)= F3*x/R5*(-alp(4)*s +alp(5)*(C*q*QR5-z))
+      du( 2)= alp(4)/R3*(s2d-F3*y*s/R2)+alp(5)*F3/R5*(C*(t-y+y*q*QR5)-y*z)
+      du( 3)=-alp(4)/R3*(F1-A3*sd*sd)  -alp(5)*F3/R5*(C*(s-d+d*q*QR5)-d*z)
+      du( 4)=-alp(4)*F3*s/R5*A5 +alp(5)*(C*qR*QR5*A7-F3*z/R5*A5)
+      du( 5)= F3*x/R5*(-alp(4)*(s2d-F5*y*s/R2) &
+                       -alp(5)*F5/R2*(C*(t-y+y*q*QR7)-y*z))
+      du( 6)= F3*x/R5*( alp(4)*(F1-(F2+A5)*sd*sd) &
+                       +alp(5)*F5/R2*(C*(s-d+d*q*QR7)-d*z))
+      du( 7)= du(5)
+      du( 8)= F3/R5*(-alp(4)*(F2*y*s2d+s*B5) &
+                     -alp(5)*(C*(F2*sd*sd+F10*y*(t-y)/R2-q*QR5*B7)+z*B5))
+      du( 9)= F3/R5*( alp(4)*y*(F1-A5*sd*sd) &
+                     +alp(5)*(C*(F3+A5)*s2d-y*DR5*(C*D7+z)))
+      du(10)= F3*x/R5*(-alp(4)*(c2d+s*DR5) &
+                       +alp(5)*(F5*C/R2*(s-d+d*q*QR7)-F1-z*DR5))
+      du(11)= F3/R5*( alp(4)*(d*B5*s2d-y*C5*c2d) &
+                     +alp(5)*(C*((F3+A5)*s2d-y*DR5*D7)-y*(F1+z*DR5)))
+      du(12)= F3/R5*(-alp(4)*d*(F1-A5*sd*sd) &
+                     -alp(5)*(C*(c2d+F10*d*(s-d)/R2-q*QR5*C7)+z*(F1+C5)))
+      do 444 i=1,12
+        u(i)=u(i)+pot3/pi2*du(i)
  444  enddo
     endif
 !=========================================
-!=====  INFLATE SOURCE CONTRIBUTION  =====
+!=====  inflate source contribution  =====
 !=========================================
-    if(POT4/=F0) then
-      DU( 1)= ALP(4)*F3*X*D/R5
-      DU( 2)= ALP(4)*F3*Y*D/R5
-      DU( 3)= ALP(4)*C3/R3
-      DU( 4)= ALP(4)*F3*D/R5*A5
-      DU( 5)=-ALP(4)*F15*XY*D/R7
-      DU( 6)=-ALP(4)*F3*X/R5*C5
-      DU( 7)= DU(5)
-      DU( 8)= ALP(4)*F3*D/R5*B5
-      DU( 9)=-ALP(4)*F3*Y/R5*C5
-      DU(10)= DU(6)
-      DU(11)= DU(9)
-      DU(12)= ALP(4)*F3*D/R5*(F2+C5)
-      do 555 I=1,12
-        U(I)=U(I)+POT4/PI2*DU(I)
+    if(pot4/=F0) then
+      du( 1)= alp(4)*F3*x*d/R5
+      du( 2)= alp(4)*F3*y*d/R5
+      du( 3)= alp(4)*C3/R3
+      du( 4)= alp(4)*F3*d/R5*A5
+      du( 5)=-alp(4)*F15*xy*d/R7
+      du( 6)=-alp(4)*F3*x/R5*C5
+      du( 7)= du(5)
+      du( 8)= alp(4)*F3*d/R5*B5
+      du( 9)=-alp(4)*F3*y/R5*C5
+      du(10)= du(6)
+      du(11)= du(9)
+      du(12)= alp(4)*F3*d/R5*(F2+C5)
+      do 555 i=1,12
+        u(i)=u(i)+pot4/pi2*du(i)
  555  enddo
     endif
     return
-end subroutine UC0
+end subroutine uC0
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine DC3D(ALPHA,X,Y,Z,DEPTH,DIP, &
-                AL1,AL2,AW1,AW2,DISL1,DISL2,DISL3, &
-                UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ,IRET)
+subroutine DC3D(alpha,x,y,z,depth,dip, &
+                AL1,AL2,AW1,AW2,disl1,disl2,disl3, &
+                ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz,iret)
 !********************************************************************
 !*****                                                          *****
-!*****    DISPLACEMENT AND STRAIN AT DEPTH                      *****
-!*****    DUE TO BURIED FINITE FAULT IN A SEMIINFINITE MEDIUM   *****
-!*****              CODED BY  Y.OKADA ... SEP.1991              *****
+!*****    displacement and strain at depth                      *****
+!*****    due to buried finite fault in a semi-infinite medium  *****
+!*****              CODED BY  y.OKADA ... SEP.1991              *****
 !*****              REVISED ... NOV.1991, APR.1992, MAY.1993,   *****
 !*****                          JUL.1993, MAY.2002              *****
 !--------------------------------------------------------------------
 !-----                     converted to Fortran90 (free form)   -----
-!-----                                T. Miyashita, Jan. 2020   -----
+!-----                                t. Miyashita, Jan. 2020   -----
 !--------------------------------------------------------------------
 !********************************************************************
 !
-!***** INPUT
-!*****   ALPHA : MEDIUM CONSTANT  (LAMBDA+MYU)/(LAMBDA+2*MYU)
-!*****   X,Y,Z : COORDINATE OF OBSERVING POINT
-!*****   DEPTH : DEPTH OF REFERENCE POINT
-!*****   DIP   : DIP-ANGLE (DEGREE)
-!*****   AL1,AL2   : FAULT LENGTH RANGE
-!*****   AW1,AW2   : FAULT WIDTH RANGE
-!*****   DISL1-DISL3 : STRIKE-, DIP-, TENSILE-DISLOCATIONS
+!***** input
+!*****   alpha : medium constant  (lambda+myu)/(lambda+2*myu)
+!*****   x,y,z : coordinate of observing point
+!*****   depth : depth of reference point
+!*****   dip   : dip-angle (degree)
+!*****   AL1,AL2   : fault length range
+!*****   AW1,AW2   : fault width range
+!*****   disl1-disl3 : strike-, dip-, tensile-dislocations
 !
-!***** OUTPUT
-!*****   UX, UY, UZ  : DISPLACEMENT ( UNIT=(UNIT OF DISL)
-!*****   UXX,UYX,UZX : X-DERIVATIVE ( UNIT=(UNIT OF DISL) /
-!*****   UXY,UYY,UZY : Y-DERIVATIVE        (UNIT OF X,Y,Z,DEPTH,AL,AW) )
-!*****   UXZ,UYZ,UZZ : Z-DERIVATIVE
-!*****   IRET        : return CODE
-!*****               :   =0....NORMAL
-!*****               :   =1....SINGULAR
-!*****               :   =2....POSITIVE Z WAS GIVEN
+!***** output
+!*****   ux, uy, uz  : displacement ( unit=(unit of dislocation) )
+!*****   uxx,uyx,uzx : x-derivative ( unit=(unit of dislocation) /
+!*****   uxy,uyy,uzy : y-derivative        (unit of x,y,z,depth,AL,AW) )
+!*****   uxz,uyz,uzz : z-derivative
+!*****   iret        : return code
+!*****               :   =0....normal
+!*****               :   =1....singular
+!*****               :   =2....positive z was given
     implicit none
 
     ! arguments
-    real*8, intent(in) :: ALPHA,X,Y,Z,DEPTH,DIP,AL1,AL2,AW1,AW2,DISL1,DISL2,DISL3
-    real*8, intent(out) :: UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ
-    integer, intent(out) :: IRET
+    real*8, intent(in) :: alpha,x,y,z,depth,dip,AL1,AL2,AW1,AW2,disl1,disl2,disl3
+    real*8, intent(out) :: ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz
+    integer, intent(out) :: iret
 
     ! local variables
-    real*8 :: SD,CD
-    real*8 :: XI(2),ET(2)
-    integer :: KXI(2),KET(2)
-    real*8 :: U(12),DU(12),DUA(12),DUB(12),DUC(12)
-    real*8 :: DD1, DD2, DD3
-    real*8 :: ZZ, D, P, Q, R12, R21, R22
-    real*8 :: ALP(5)
+    real*8 :: sd,cd
+    real*8 :: xi(2),et(2)
+    integer :: kxi(2),ket(2)
+    real*8 :: u(12),du(12),duA(12),duB(12),duC(12)
+    real*8 :: dd1, dd2, dd3
+    real*8 :: zz, d, p, q, R12, R21, R22
+    real*8 :: alp(5)
     ! parameters
     real*8, parameter :: F0 = 0.0d0
-    real*8, parameter :: EPS = 1.0d-6
+    real*8, parameter :: eps = 1.0d-6
     ! loop counters
-    integer :: I,J,K
+    integer :: i,j,k
 
     ! initialization
-    U(1:12) = 0.0d0
-    DU(1:12) = 0.0d0
-    DUA(1:12) = 0.0d0
-    DUB(1:12) = 0.0d0
-    DUC(1:12) = 0.0d0
-    call varout(U,UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ)
+    u(1:12) = 0.0d0
+    du(1:12) = 0.0d0
+    duA(1:12) = 0.0d0
+    duB(1:12) = 0.0d0
+    duC(1:12) = 0.0d0
+    call varout(u,ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz)
 
 !-----
-      IRET=0
-    if(Z>0.0d0) then
-      IRET=2
+      iret=0
+    if(z>0.0d0) then
+      iret=2
       return
     endif
 !-----
-    ZZ=Z
-    DD1=DISL1
-    DD2=DISL2
-    DD3=DISL3
-!### CAUTION ### if XI,ET,Q ARE SUFFICIENTLY SMALL, THEY ARE SET TO ZER0
-    XI(1)=X-AL1
-    XI(2)=X-AL2
-    if(dabs(XI(1))<EPS) XI(1)=F0
-    if(dabs(XI(2))<EPS) XI(2)=F0
+    zz=z
+    dd1=disl1
+    dd2=disl2
+    dd3=disl3
+!### caution ### if xi,et,q are sufficiently small, they are set to zero
+    xi(1)=x-AL1
+    xi(2)=x-AL2
+    if(dabs(xi(1))<eps) xi(1)=F0
+    if(dabs(xi(2))<eps) xi(2)=F0
 !======================================
-!=====  REAL-SOURCE CONTRIBUTION  =====
+!=====  real-source contribution  =====
 !======================================
-    call assign_alpha(ALPHA,ALP)
-    call DCCON0(DIP,SD,CD)
+    call assign_alpha(alpha,alp)
+    call dccon0(dip,sd,cd)
 !-----
-    D=DEPTH+Z
-    P=Y*CD+D*SD
-    Q=Y*SD-D*CD
-    ET(1)=P-AW1
-    ET(2)=P-AW2
-    if(dabs(Q)<EPS)  Q=F0
-    if(dabs(ET(1))<EPS) ET(1)=F0
-    if(dabs(ET(2))<EPS) ET(2)=F0
+    d=depth+z
+    p=y*cd+d*sd
+    q=y*sd-d*cd
+    et(1)=p-AW1
+    et(2)=p-AW2
+    if(dabs(q)<eps)  q=F0
+    if(dabs(et(1))<eps) et(1)=F0
+    if(dabs(et(2))<eps) et(2)=F0
 !--------------------------------
-!----- REJECT SINGULAR CASE -----
+!----- reject singular case -----
 !--------------------------------
-!----- ON FAULT EDGE
-    if(Q==F0 .and. &
-      (    (XI(1)*XI(2)<=F0 .and. ET(1)*ET(2)==F0) &
-       .or.(ET(1)*ET(2)<=F0 .and. XI(1)*XI(2)==F0) )) then
-      IRET=1
+!----- on fault edge
+    if(q==F0 .and. &
+      (    (xi(1)*xi(2)<=F0 .and. et(1)*et(2)==F0) &
+       .or.(et(1)*et(2)<=F0 .and. xi(1)*xi(2)==F0) )) then
+      iret=1
       return
     endif
-!----- ON NEGATIVE EXTENSION OF FAULT EDGE
-    KXI(1)=0
-    KXI(2)=0
-    KET(1)=0
-    KET(2)=0
-    R12=dsqrt(XI(1)*XI(1)+ET(2)*ET(2)+Q*Q)
-    R21=dsqrt(XI(2)*XI(2)+ET(1)*ET(1)+Q*Q)
-    R22=dsqrt(XI(2)*XI(2)+ET(2)*ET(2)+Q*Q)
-    if(XI(1)<F0 .and. R21+XI(2)<EPS) KXI(1)=1
-    if(XI(1)<F0 .and. R22+XI(2)<EPS) KXI(2)=1
-    if(ET(1)<F0 .and. R12+ET(2)<EPS) KET(1)=1
-    if(ET(1)<F0 .and. R22+ET(2)<EPS) KET(2)=1
+!----- on negative extension of fault edge
+    kxi(1)=0
+    kxi(2)=0
+    ket(1)=0
+    ket(2)=0
+    R12=dsqrt(xi(1)*xi(1)+et(2)*et(2)+q*q)
+    R21=dsqrt(xi(2)*xi(2)+et(1)*et(1)+q*q)
+    R22=dsqrt(xi(2)*xi(2)+et(2)*et(2)+q*q)
+    if(xi(1)<F0 .and. R21+xi(2)<eps) kxi(1)=1
+    if(xi(1)<F0 .and. R22+xi(2)<eps) kxi(2)=1
+    if(et(1)<F0 .and. R12+et(2)<eps) ket(1)=1
+    if(et(1)<F0 .and. R22+et(2)<eps) ket(2)=1
 !=====
-    do 223 K=1,2
-    do 222 J=1,2
-      call UA(XI(J),ET(K),Q,DD1,DD2,DD3,KXI(K),KET(J),SD,CD,ALP,DUA)
+    do 223 k=1,2
+    do 222 j=1,2
+      call uA(xi(j),et(k),q,dd1,dd2,dd3,kxi(k),ket(j),sd,cd,alp,duA)
 !-----
-      do 220 I=1,10,3
-        DU(I)  =-DUA(I)
-        DU(I+1)=-DUA(I+1)*CD+DUA(I+2)*SD
-        DU(I+2)=-DUA(I+1)*SD-DUA(I+2)*CD
-        if(I<10) cycle
-        DU(I)  =-DU(I)
-        DU(I+1)=-DU(I+1)
-        DU(I+2)=-DU(I+2)
+      do 220 i=1,10,3
+        du(i)  =-duA(i)
+        du(i+1)=-duA(i+1)*cd+duA(i+2)*sd
+        du(i+2)=-duA(i+1)*sd-duA(i+2)*cd
+        if(i<10) cycle
+        du(i)  =-du(i)
+        du(i+1)=-du(i+1)
+        du(i+2)=-du(i+2)
 220   enddo
-      do 221 I=1,12
-        if(J+K/=3) U(I)=U(I)+DU(I)
-        if(J+K==3) U(I)=U(I)-DU(I)
+      do 221 i=1,12
+        if(j+k/=3) u(i)=u(i)+du(i)
+        if(j+k==3) u(i)=u(i)-du(i)
 221   enddo
 !-----
 222 enddo
 223 enddo
 !=======================================
-!=====  IMAGE-SOURCE CONTRIBUTION  =====
+!=====  image-source contribution  =====
 !=======================================
-    D=DEPTH-Z
-    P=Y*CD+D*SD
-    Q=Y*SD-D*CD
-    ET(1)=P-AW1
-    ET(2)=P-AW2
-    if(dabs(Q)<EPS)  Q=F0
-    if(dabs(ET(1))<EPS) ET(1)=F0
-    if(dabs(ET(2))<EPS) ET(2)=F0
+    d=depth-z
+    p=y*cd+d*sd
+    q=y*sd-d*cd
+    et(1)=p-AW1
+    et(2)=p-AW2
+    if(dabs(q)<eps)  q=F0
+    if(dabs(et(1))<eps) et(1)=F0
+    if(dabs(et(2))<eps) et(2)=F0
 !--------------------------------
-!----- REJECT SINGULAR CASE -----
+!----- reject singular case -----
 !--------------------------------
-!----- ON FAULT EDGE
-    if(Q==F0 .and. &
-      (    (XI(1)*XI(2)<=F0 .and. ET(1)*ET(2)==F0) &
-       .or.(ET(1)*ET(2)<=F0 .and. XI(1)*XI(2)==F0) )) then
-      IRET=1
-      call varout(U,UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ)
+!----- on fault edge
+    if(q==F0 .and. &
+      (    (xi(1)*xi(2)<=F0 .and. et(1)*et(2)==F0) &
+       .or.(et(1)*et(2)<=F0 .and. xi(1)*xi(2)==F0) )) then
+      iret=1
+      call varout(u,ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz)
       return
     endif
-!----- ON NEGATIVE EXTENSION OF FAULT EDGE
-    KXI(1)=0
-    KXI(2)=0
-    KET(1)=0
-    KET(2)=0
-    R12=dsqrt(XI(1)*XI(1)+ET(2)*ET(2)+Q*Q)
-    R21=dsqrt(XI(2)*XI(2)+ET(1)*ET(1)+Q*Q)
-    R22=dsqrt(XI(2)*XI(2)+ET(2)*ET(2)+Q*Q)
-    if(XI(1)<F0 .and. R21+XI(2)<EPS) KXI(1)=1
-    if(XI(1)<F0 .and. R22+XI(2)<EPS) KXI(2)=1
-    if(ET(1)<F0 .and. R12+ET(2)<EPS) KET(1)=1
-    if(ET(1)<F0 .and. R22+ET(2)<EPS) KET(2)=1
+!----- on negative extension of fault edge
+    kxi(1)=0
+    kxi(2)=0
+    ket(1)=0
+    ket(2)=0
+    R12=dsqrt(xi(1)*xi(1)+et(2)*et(2)+q*q)
+    R21=dsqrt(xi(2)*xi(2)+et(1)*et(1)+q*q)
+    R22=dsqrt(xi(2)*xi(2)+et(2)*et(2)+q*q)
+    if(xi(1)<F0 .and. R21+xi(2)<eps) kxi(1)=1
+    if(xi(1)<F0 .and. R22+xi(2)<eps) kxi(2)=1
+    if(et(1)<F0 .and. R12+et(2)<eps) ket(1)=1
+    if(et(1)<F0 .and. R22+et(2)<eps) ket(2)=1
 !=====
-    do 334 K=1,2
-    do 333 J=1,2
-      call UA(XI(J),ET(K),Q   ,DD1,DD2,DD3,KXI(K),KET(J),SD,CD,ALP,DUA)
-      call UB(XI(J),ET(K),Q   ,DD1,DD2,DD3,KXI(K),KET(J),SD,CD,ALP,DUB)
-      call UC(XI(J),ET(K),Q,ZZ,DD1,DD2,DD3,KXI(K),KET(J),SD,CD,ALP,DUC)
+    do 334 k=1,2
+    do 333 j=1,2
+      call uA(xi(j),et(k),q   ,dd1,dd2,dd3,kxi(k),ket(j),sd,cd,alp,duA)
+      call uB(xi(j),et(k),q   ,dd1,dd2,dd3,kxi(k),ket(j),sd,cd,alp,duB)
+      call uC(xi(j),et(k),q,zz,dd1,dd2,dd3,kxi(k),ket(j),sd,cd,alp,duC)
 !-----
-      do 330 I=1,10,3
-        DU(I)=DUA(I)+DUB(I)+Z*DUC(I)
-        DU(I+1)=(DUA(I+1)+DUB(I+1)+Z*DUC(I+1))*CD &
-               -(DUA(I+2)+DUB(I+2)+Z*DUC(I+2))*SD
-        DU(I+2)=(DUA(I+1)+DUB(I+1)-Z*DUC(I+1))*SD &
-               +(DUA(I+2)+DUB(I+2)-Z*DUC(I+2))*CD
-        if(I<10) cycle
-        DU(10)=DU(10)+DUC(1)
-        DU(11)=DU(11)+DUC(2)*CD-DUC(3)*SD
-        DU(12)=DU(12)-DUC(2)*SD-DUC(3)*CD
+      do 330 i=1,10,3
+        du(i)=duA(i)+duB(i)+z*duC(i)
+        du(i+1)=(duA(i+1)+duB(i+1)+z*duC(i+1))*cd &
+               -(duA(i+2)+duB(i+2)+z*duC(i+2))*sd
+        du(i+2)=(duA(i+1)+duB(i+1)-z*duC(i+1))*sd &
+               +(duA(i+2)+duB(i+2)-z*duC(i+2))*cd
+        if(i<10) cycle
+        du(10)=du(10)+duC(1)
+        du(11)=du(11)+duC(2)*cd-duC(3)*sd
+        du(12)=du(12)-duC(2)*sd-duC(3)*cd
 330   enddo
-      do 331 I=1,12
-        if(J+K/=3) U(I)=U(I)+DU(I)
-        if(J+K==3) U(I)=U(I)-DU(I)
+      do 331 i=1,12
+        if(j+k/=3) u(i)=u(i)+du(i)
+        if(j+k==3) u(i)=u(i)-du(i)
 331   enddo
 !-----
 333 enddo
 334 enddo
 !=====
-    call varout(U,UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ)
+    call varout(u,ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz)
     return
 end subroutine DC3D
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  UA(XI,ET,Q,DISL1,DISL2,DISL3,KXI,KET,SD,CD,ALP,U)
+subroutine  uA(xi,et,q,disl1,disl2,disl3,kxi,ket,sd,cd,alp,u)
 !
 !********************************************************************
-!*****    DISPLACEMENT AND STRAIN AT DEPTH (PART-A)             *****
-!*****    DUE TO BURIED FINITE FAULT IN A SEMIINFINITE MEDIUM   *****
+!*****    displacement and strain at depth (part-A)             *****
+!*****    due to buried finite fault in a semi-infinite medium  *****
 !********************************************************************
 !
-!***** INPUT
-!*****   XI,ET,Q : STATION COORDINATES IN FAULT SYSTEM
-!*****   DISL1-DISL3 : STRIKE-, DIP-, TENSILE-DISLOCATIONS
-!*****   KXI,KET     : KXI=1, KET=1 MEANS R+XI<EPS, R+ET<EPS, RESPECTIVELY
-!*****   SD,CD       : SIN, COS OF DIP-ANGLE
-!*****   ALP         : COEFFICIENTS RELATED TO ALPHA VALUE
-!***** OUTPUT
-!*****   U(12) : DISPLACEMENT AND THEIR DERIVATIVES
+!***** input
+!*****   xi,et,q : station coordinates in fault system
+!*****   disl1-disl3 : strike-, dip-, tensile-dislocations
+!*****   kxi,ket     : kxi=1, ket=1 means R+xi<eps, R+et<eps, respectively
+!*****   sd,cd       : sin, cos of dip-angle
+!*****   alp         : coefficients related to alpha value
+!***** output
+!*****   u(12) : displacement and their derivatives
 !-----
     implicit none
     ! arguments
-    real*8, intent(in) :: XI,ET,Q,DISL1,DISL2,DISL3
-    integer, intent(in) :: KXI,KET
-    real*8, intent(in) :: SD,CD
-    real*8, intent(in) :: ALP(5)
-    real*8, intent(out) :: U(12)
+    real*8, intent(in) :: xi,et,q,disl1,disl2,disl3
+    integer, intent(in) :: kxi,ket
+    real*8, intent(in) :: sd,cd
+    real*8, intent(in) :: alp(5)
+    real*8, intent(out) :: u(12)
     ! local variables
-    real*8 :: DU(12)
-    real*8 :: R,Ytilde,Dtilde
+    real*8 :: du(12)
+    real*8 :: R,ytilde,dtilde
     real*8 :: THETA,ALX,ALE
     real*8 :: X11,X32,Y11,Y32
     real*8 :: EY,EZ,FY,FZ,GY,GZ,HY,HZ
-    real*8 :: XY,QX,QY
-    real*8 :: XI2,Q2
+    real*8 :: xy,qX,qY
+    real*8 :: xi2,q2
     real*8 :: R3
     ! parameters
     real*8, parameter :: F0=0.0d0, F2=2.0d0
-    real*8, parameter :: PI2=6.283185307179586d0
+    real*8, parameter :: pi2=6.283185307179586d0
     ! loop counter
-    integer :: I
+    integer :: i
 
-    U(1:12) = 0.0d0
-    DU(1:12) = 0.0d0
+    u(1:12) = 0.0d0
+    du(1:12) = 0.0d0
 
-    call DCCON2(XI,ET,Q,SD,CD,R,Ytilde,Dtilde)
-    call math_singularity(XI,ET,Q,R,KXI,KET,THETA,ALX,ALE)
-    call eq14_xy(XI,ET,KXI,KET,R,X11,X32,Y11,Y32)
-    call auxvar_derivative_yz(XI,Q,SD,CD,R,Ytilde,Dtilde,X11,X32,Y32, &
+    call dccon2(xi,et,q,sd,cd,R,ytilde,dtilde)
+    call math_singularity(xi,et,q,R,kxi,ket,THETA,ALX,ALE)
+    call eq14_xy(xi,et,kxi,ket,R,X11,X32,Y11,Y32)
+    call auxvar_derivative_yz(xi,q,sd,cd,R,ytilde,dtilde,X11,X32,Y32, &
                               EY,EZ,FY,FZ,GY,GZ,HY,HZ)
 
     R3=R**3.0d0
-    XI2=XI*XI
-    Q2=Q*Q
+    xi2=xi*xi
+    q2=q*q
 
-    XY=XI*Y11
-    QX=Q *X11
-    QY=Q *Y11
+    xy=xi*Y11
+    qX=q *X11
+    qY=q *Y11
 !======================================
-!=====  STRIKE-SLIP CONTRIBUTION  =====
+!=====  strike-slip contribution  =====
 !======================================
-    if(DISL1/=F0) then
-      DU( 1)= THETA/F2     +ALP(2)*XI*QY
-      DU( 2)=               ALP(2)*Q/R
-      DU( 3)= ALP(1)*ALE   -ALP(2)*Q*QY
-      DU( 4)=-ALP(1)*QY    -ALP(2)*XI2*Q*Y32
-      DU( 5)=              -ALP(2)*XI*Q/R3
-      DU( 6)= ALP(1)*XY    +ALP(2)*XI*Q2*Y32
-      DU( 7)= ALP(1)*XY*SD +ALP(2)*XI*FY+Dtilde/F2*X11
-      DU( 8)=               ALP(2)*EY
-      DU( 9)= ALP(1)*(CD/R+QY*SD) -ALP(2)*Q*FY
-      DU(10)= ALP(1)*XY*CD        +ALP(2)*XI*FZ+Ytilde/F2*X11
-      DU(11)=               ALP(2)*EZ
-      DU(12)=-ALP(1)*(SD/R-QY*CD) -ALP(2)*Q*FZ
-      do 222 I=1,12
-        U(I)=U(I)+DISL1/PI2*DU(I)
+    if(disl1/=F0) then
+      du( 1)= THETA/F2     +alp(2)*xi*qY
+      du( 2)=               alp(2)*q/R
+      du( 3)= alp(1)*ALE   -alp(2)*q*qY
+      du( 4)=-alp(1)*qY    -alp(2)*xi2*q*Y32
+      du( 5)=              -alp(2)*xi*q/R3
+      du( 6)= alp(1)*xy    +alp(2)*xi*q2*Y32
+      du( 7)= alp(1)*xy*sd +alp(2)*xi*FY+dtilde/F2*X11
+      du( 8)=               alp(2)*EY
+      du( 9)= alp(1)*(cd/R+qY*sd) -alp(2)*q*FY
+      du(10)= alp(1)*xy*cd        +alp(2)*xi*FZ+ytilde/F2*X11
+      du(11)=               alp(2)*EZ
+      du(12)=-alp(1)*(sd/R-qY*cd) -alp(2)*q*FZ
+      do 222 i=1,12
+        u(i)=u(i)+disl1/pi2*du(i)
  222  enddo
     endif
 !======================================
-!=====    DIP-SLIP CONTRIBUTION   =====
+!=====    dip-slip contribution   =====
 !======================================
-    if(DISL2/=F0) then
-      DU( 1)=             ALP(2)*Q/R
-      DU( 2)= THETA/F2   +ALP(2)*ET*QX
-      DU( 3)= ALP(1)*ALX -ALP(2)*Q*QX
-      DU( 4)=            -ALP(2)*XI*Q/R3
-      DU( 5)= -QY/F2     -ALP(2)*ET*Q/R3
-      DU( 6)= ALP(1)/R   +ALP(2)*Q2/R3
-      DU( 7)=             ALP(2)*EY
-      DU( 8)= ALP(1)*Dtilde*X11+XY/F2*SD +ALP(2)*ET*GY
-      DU( 9)= ALP(1)*Ytilde*X11          -ALP(2)*Q*GY
-      DU(10)=             ALP(2)*EZ
-      DU(11)= ALP(1)*Ytilde*X11+XY/F2*CD +ALP(2)*ET*GZ
-      DU(12)=-ALP(1)*Dtilde*X11          -ALP(2)*Q*GZ
-      do 333 I=1,12
-        U(I)=U(I)+DISL2/PI2*DU(I)
+    if(disl2/=F0) then
+      du( 1)=             alp(2)*q/R
+      du( 2)= THETA/F2   +alp(2)*et*qX
+      du( 3)= alp(1)*ALX -alp(2)*q*qX
+      du( 4)=            -alp(2)*xi*q/R3
+      du( 5)= -qY/F2     -alp(2)*et*q/R3
+      du( 6)= alp(1)/R   +alp(2)*q2/R3
+      du( 7)=             alp(2)*EY
+      du( 8)= alp(1)*dtilde*X11+xy/F2*sd +alp(2)*et*GY
+      du( 9)= alp(1)*ytilde*X11          -alp(2)*q*GY
+      du(10)=             alp(2)*EZ
+      du(11)= alp(1)*ytilde*X11+xy/F2*cd +alp(2)*et*GZ
+      du(12)=-alp(1)*dtilde*X11          -alp(2)*q*GZ
+      do 333 i=1,12
+        u(i)=u(i)+disl2/pi2*du(i)
  333  enddo
     endif
 !========================================
-!=====  TENSILE-FAULT CONTRIBUTION  =====
+!=====  tensile-fault contribution  =====
 !========================================
-    if(DISL3/=F0) then
-      DU( 1)=-ALP(1)*ALE -ALP(2)*Q*QY
-      DU( 2)=-ALP(1)*ALX -ALP(2)*Q*QX
-      DU( 3)= THETA/F2   -ALP(2)*(ET*QX+XI*QY)
-      DU( 4)=-ALP(1)*XY  +ALP(2)*XI*Q2*Y32
-      DU( 5)=-ALP(1)/R   +ALP(2)*Q2/R3
-      DU( 6)=-ALP(1)*QY  -ALP(2)*Q*Q2*Y32
-      DU( 7)=-ALP(1)*(CD/R+QY*SD)  -ALP(2)*Q*FY
-      DU( 8)=-ALP(1)*Ytilde*X11         -ALP(2)*Q*GY
-      DU( 9)= ALP(1)*(Dtilde*X11+XY*SD) +ALP(2)*Q*HY
-      DU(10)= ALP(1)*(SD/R-QY*CD)  -ALP(2)*Q*FZ
-      DU(11)= ALP(1)*Dtilde*X11         -ALP(2)*Q*GZ
-      DU(12)= ALP(1)*(Ytilde*X11+XY*CD) +ALP(2)*Q*HZ
-      do 444 I=1,12
-        U(I)=U(I)+DISL3/PI2*DU(I)
+    if(disl3/=F0) then
+      du( 1)=-alp(1)*ALE -alp(2)*q*qY
+      du( 2)=-alp(1)*ALX -alp(2)*q*qX
+      du( 3)= THETA/F2   -alp(2)*(et*qX+xi*qY)
+      du( 4)=-alp(1)*xy  +alp(2)*xi*q2*Y32
+      du( 5)=-alp(1)/R   +alp(2)*q2/R3
+      du( 6)=-alp(1)*qY  -alp(2)*q*q2*Y32
+      du( 7)=-alp(1)*(cd/R+qY*sd)  -alp(2)*q*FY
+      du( 8)=-alp(1)*ytilde*X11         -alp(2)*q*GY
+      du( 9)= alp(1)*(dtilde*X11+xy*sd) +alp(2)*q*HY
+      du(10)= alp(1)*(sd/R-qY*cd)  -alp(2)*q*FZ
+      du(11)= alp(1)*dtilde*X11         -alp(2)*q*GZ
+      du(12)= alp(1)*(ytilde*X11+xy*cd) +alp(2)*q*HZ
+      do 444 i=1,12
+        u(i)=u(i)+disl3/pi2*du(i)
  444  enddo
     endif
     return
-end subroutine UA
+end subroutine uA
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  UB(XI,ET,Q,DISL1,DISL2,DISL3,KXI,KET,SD,CD,ALP,U)
+subroutine  uB(xi,et,q,disl1,disl2,disl3,kxi,ket,sd,cd,alp,u)
 !********************************************************************
-!*****    DISPLACEMENT AND STRAIN AT DEPTH (PART-B)             *****
-!*****    DUE TO BURIED FINITE FAULT IN A SEMIINFINITE MEDIUM   *****
+!*****    displacement and strain at depth (part-B)             *****
+!*****    due to buried finite fault in a semi-infinite medium  *****
 !********************************************************************
 !
-!***** INPUT
-!*****   XI,ET,Q : STATION COORDINATES IN FAULT SYSTEM
-!*****   DISL1-DISL3 : STRIKE-, DIP-, TENSILE-DISLOCATIONS
-!*****   KXI,KET     : KXI=1, KET=1 MEANS R+XI<EPS, R+ET<EPS, RESPECTIVELY
-!*****   SD,CD       : SIN, COS OF DIP-ANGLE
-!*****   ALP         : COEFFICIENTS RELATED TO ALPHA VALUE
-!***** OUTPUT
-!*****   U(12) : DISPLACEMENT AND THEIR DERIVATIVES
+!***** input
+!*****   xi,et,q : station coordinates in fault system
+!*****   disl1-disl3 : strike-, dip-, tensile-dislocations
+!*****   kxi,ket     : kxi=1, ket=1 means R+xi<eps, R+et<eps, respectively
+!*****   sd,cd       : sin, cos of dip-angle
+!*****   alp         : coefficients related to alpha value
+!***** output
+!*****   u(12) : displacement and their derivatives
 !-----
     implicit none
     ! arguments
-    real*8, intent(in) :: XI,ET,Q,DISL1,DISL2,DISL3
-    integer, intent(in) :: KXI,KET
-    real*8, intent(in) :: SD,CD
-    real*8, intent(in) :: ALP(5)
-    real*8, intent(out) :: U(12)
+    real*8, intent(in) :: xi,et,q,disl1,disl2,disl3
+    integer, intent(in) :: kxi,ket
+    real*8, intent(in) :: sd,cd
+    real*8, intent(in) :: alp(5)
+    real*8, intent(out) :: u(12)
     ! local variables
-    real*8 :: DU(12)
-    real*8 :: R,Ytilde,Dtilde
+    real*8 :: du(12)
+    real*8 :: R,ytilde,dtilde
     real*8 :: THETA,ALE
     real*8 :: X11,X32,Y11,Y32
     real*8 :: EY,EZ,FY,FZ,GY,GZ,HY,HZ
-    real*8 :: X
-    real*8 :: XY,QX,QY
-    real*8 :: XI2,Q2
+    real*8 :: x
+    real*8 :: xy,qX,qY
+    real*8 :: xi2,q2
     real*8 :: R3
-    real*8 :: RD,RD2
+    real*8 :: Rd,Rd2
     real*8 :: D11
     real*8 :: AI1,AI2,AI3,AI4
     real*8 :: AJ1,AJ2,AJ3,AJ4,AJ5,AJ6
     real*8 :: AK1,AK2,AK3,AK4
     ! parameters
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F2=2.0d0
-    real*8, parameter :: PI2=6.283185307179586d0
+    real*8, parameter :: pi2=6.283185307179586d0
     ! loop counter
-    integer :: I
+    integer :: i
     ! unused (dummy) vars
     real*8 :: dum ! ALX
 
-    U(1:12)=0.0d0
-    DU(1:12)=0.0d0
+    u(1:12)=0.0d0
+    du(1:12)=0.0d0
 
-    call DCCON2(XI,ET,Q,SD,CD,R,Ytilde,Dtilde)
-    call math_singularity(XI,ET,Q,R,KXI,KET,THETA,dum,ALE)
-    call eq14_xy(XI,ET,KXI,KET,R,X11,X32,Y11,Y32)
-    call auxvar_derivative_yz(XI,Q,SD,CD,R,Ytilde,Dtilde,X11,X32,Y32, &
+    call dccon2(xi,et,q,sd,cd,R,ytilde,dtilde)
+    call math_singularity(xi,et,q,R,kxi,ket,THETA,dum,ALE)
+    call eq14_xy(xi,et,kxi,ket,R,X11,X32,Y11,Y32)
+    call auxvar_derivative_yz(xi,q,sd,cd,R,ytilde,dtilde,X11,X32,Y32, &
                               EY,EZ,FY,FZ,GY,GZ,HY,HZ)
 
     R3=R**3.0d0
-    XI2=XI*XI
-    Q2=Q*Q
+    xi2=xi*xi
+    q2=q*q
 
-    RD=R+Dtilde
-    D11=F1/(R*RD)
-    AJ2=XI*Ytilde/RD*D11
-    AJ5=-(Dtilde+Ytilde*Ytilde/RD)*D11
-    if(CD/=F0) then
+    Rd=R+dtilde
+    D11=F1/(R*Rd)
+    AJ2=xi*ytilde/Rd*D11
+    AJ5=-(dtilde+ytilde*ytilde/Rd)*D11
+    if(cd/=F0) then
       ! p.1034 (ii)
-      if(XI==F0) then
+      if(xi==F0) then
         AI4=F0
       else
-        X=dsqrt(XI2+Q2)
-        AI4=F1/(CD*CD)*( XI/RD*SD*CD &
-           +F2*datan((ET*(X+Q*CD)+X*(R+X)*SD)/(XI*(R+X)*CD)) )
+        x=dsqrt(xi2+q2)
+        AI4=F1/(cd*cd)*( xi/Rd*sd*cd &
+           +F2*datan((et*(x+q*cd)+x*(R+x)*sd)/(xi*(R+x)*cd)) )
       endif
-      AI3=(Ytilde*CD/RD-ALE+SD*dlog(RD))/(CD*CD)
-      AK1=XI*(D11-Y11*SD)/CD
-      AK3=(Q*Y11-Ytilde*D11)/CD
-      AJ3=(AK1-AJ2*SD)/CD
-      AJ6=(AK3-AJ5*SD)/CD
+      AI3=(ytilde*cd/Rd-ALE+sd*dlog(Rd))/(cd*cd)
+      AK1=xi*(D11-Y11*sd)/cd
+      AK3=(q*Y11-ytilde*D11)/cd
+      AJ3=(AK1-AJ2*sd)/cd
+      AJ6=(AK3-AJ5*sd)/cd
     else
-      RD2=RD*RD
-      AI3=(ET/RD+Ytilde*Q/RD2-ALE)/F2
-      AI4=XI*Ytilde/RD2/F2
-      AK1=XI*Q/RD*D11
-      AK3=SD/RD*(XI2*D11-F1)
-      AJ3=-XI/RD2*(Q2*D11-F1/F2)
-      AJ6=-Ytilde/RD2*(XI2*D11-F1/F2)
+      Rd2=Rd*Rd
+      AI3=(et/Rd+ytilde*q/Rd2-ALE)/F2
+      AI4=xi*ytilde/Rd2/F2
+      AK1=xi*q/Rd*D11
+      AK3=sd/Rd*(xi2*D11-F1)
+      AJ3=-xi/Rd2*(q2*D11-F1/F2)
+      AJ6=-ytilde/Rd2*(xi2*D11-F1/F2)
     endif
 !-----
-    XY=XI*Y11
-    AI1=-XI/RD*CD-AI4*SD
-    AI2= dlog(RD)+AI3*SD
-    AK2= F1/R+AK3*SD
-    AK4= XY*CD-AK1*SD
-    AJ1= AJ5*CD-AJ6*SD
-    AJ4=-XY-AJ2*CD+AJ3*SD
+    xy=xi*Y11
+    AI1=-xi/Rd*cd-AI4*sd
+    AI2= dlog(Rd)+AI3*sd
+    AK2= F1/R+AK3*sd
+    AK4= xy*cd-AK1*sd
+    AJ1= AJ5*cd-AJ6*sd
+    AJ4=-xy-AJ2*cd+AJ3*sd
 !=====
-    QX=Q*X11
-    QY=Q*Y11
+    qX=q*X11
+    qY=q*Y11
 !======================================
-!=====  STRIKE-SLIP CONTRIBUTION  =====
+!=====  strike-slip contribution  =====
 !======================================
-    if(DISL1/=F0) then
-      DU( 1)=-XI*QY-THETA -ALP(3)*AI1*SD
-      DU( 2)=-Q/R         +ALP(3)*Ytilde/RD*SD
-      DU( 3)= Q*QY        -ALP(3)*AI2*SD
-      DU( 4)= XI2*Q*Y32   -ALP(3)*AJ1*SD
-      DU( 5)= XI*Q/R3     -ALP(3)*AJ2*SD
-      DU( 6)=-XI*Q2*Y32   -ALP(3)*AJ3*SD
-      DU( 7)=-XI*FY-Dtilde*X11 +ALP(3)*(XY+AJ4)*SD
-      DU( 8)=-EY          +ALP(3)*(F1/R+AJ5)*SD
-      DU( 9)= Q*FY        -ALP(3)*(QY-AJ6)*SD
-      DU(10)=-XI*FZ-Ytilde*X11 +ALP(3)*AK1*SD
-      DU(11)=-EZ          +ALP(3)*Ytilde*D11*SD
-      DU(12)= Q*FZ        +ALP(3)*AK2*SD
-      do 222 I=1,12
-        U(I)=U(I)+DISL1/PI2*DU(I)
+    if(disl1/=F0) then
+      du( 1)=-xi*qY-THETA -alp(3)*AI1*sd
+      du( 2)=-q/R         +alp(3)*ytilde/Rd*sd
+      du( 3)= q*qY        -alp(3)*AI2*sd
+      du( 4)= xi2*q*Y32   -alp(3)*AJ1*sd
+      du( 5)= xi*q/R3     -alp(3)*AJ2*sd
+      du( 6)=-xi*q2*Y32   -alp(3)*AJ3*sd
+      du( 7)=-xi*FY-dtilde*X11 +alp(3)*(xy+AJ4)*sd
+      du( 8)=-EY          +alp(3)*(F1/R+AJ5)*sd
+      du( 9)= q*FY        -alp(3)*(qY-AJ6)*sd
+      du(10)=-xi*FZ-ytilde*X11 +alp(3)*AK1*sd
+      du(11)=-EZ          +alp(3)*ytilde*D11*sd
+      du(12)= q*FZ        +alp(3)*AK2*sd
+      do 222 i=1,12
+        u(i)=u(i)+disl1/pi2*du(i)
  222  enddo
     endif
 !======================================
-!=====    DIP-SLIP CONTRIBUTION   =====
+!=====    dip-slip contribution   =====
 !======================================
-    if(DISL2/=F0) then
-      DU( 1)=-Q/R         +ALP(3)*AI3*SD*CD
-      DU( 2)=-ET*QX-THETA -ALP(3)*XI/RD*SD*CD
-      DU( 3)= Q*QX        +ALP(3)*AI4*SD*CD
-      DU( 4)= XI*Q/R3     +ALP(3)*AJ4*SD*CD
-      DU( 5)= ET*Q/R3+QY  +ALP(3)*AJ5*SD*CD
-      DU( 6)=-Q2/R3       +ALP(3)*AJ6*SD*CD
-      DU( 7)=-EY          +ALP(3)*AJ1*SD*CD
-      DU( 8)=-ET*GY-XY*SD +ALP(3)*AJ2*SD*CD
-      DU( 9)= Q*GY        +ALP(3)*AJ3*SD*CD
-      DU(10)=-EZ          -ALP(3)*AK3*SD*CD
-      DU(11)=-ET*GZ-XY*CD -ALP(3)*XI*D11*SD*CD
-      DU(12)= Q*GZ        -ALP(3)*AK4*SD*CD
-      do 333 I=1,12
-        U(I)=U(I)+DISL2/PI2*DU(I)
+    if(disl2/=F0) then
+      du( 1)=-q/R         +alp(3)*AI3*sd*cd
+      du( 2)=-et*qX-THETA -alp(3)*xi/Rd*sd*cd
+      du( 3)= q*qX        +alp(3)*AI4*sd*cd
+      du( 4)= xi*q/R3     +alp(3)*AJ4*sd*cd
+      du( 5)= et*q/R3+qY  +alp(3)*AJ5*sd*cd
+      du( 6)=-q2/R3       +alp(3)*AJ6*sd*cd
+      du( 7)=-EY          +alp(3)*AJ1*sd*cd
+      du( 8)=-et*GY-xy*sd +alp(3)*AJ2*sd*cd
+      du( 9)= q*GY        +alp(3)*AJ3*sd*cd
+      du(10)=-EZ          -alp(3)*AK3*sd*cd
+      du(11)=-et*GZ-xy*cd -alp(3)*xi*D11*sd*cd
+      du(12)= q*GZ        -alp(3)*AK4*sd*cd
+      do 333 i=1,12
+        u(i)=u(i)+disl2/pi2*du(i)
  333  enddo
     endif
 !========================================
-!=====  TENSILE-FAULT CONTRIBUTION  =====
+!=====  tensile-fault contribution  =====
 !========================================
-    if(DISL3/=F0) then
-      DU( 1)= Q*QY              -ALP(3)*AI3*SD*SD
-      DU( 2)= Q*QX              +ALP(3)*XI/RD*SD*SD
-      DU( 3)= ET*QX+XI*QY-THETA -ALP(3)*AI4*SD*SD
-      DU( 4)=-XI*Q2*Y32 -ALP(3)*AJ4*SD*SD
-      DU( 5)=-Q2/R3     -ALP(3)*AJ5*SD*SD
-      DU( 6)= Q*Q2*Y32  -ALP(3)*AJ6*SD*SD
-      DU( 7)= Q*FY -ALP(3)*AJ1*SD*SD
-      DU( 8)= Q*GY -ALP(3)*AJ2*SD*SD
-      DU( 9)=-Q*HY -ALP(3)*AJ3*SD*SD
-      DU(10)= Q*FZ +ALP(3)*AK3*SD*SD
-      DU(11)= Q*GZ +ALP(3)*XI*D11*SD*SD
-      DU(12)=-Q*HZ +ALP(3)*AK4*SD*SD
-      do 444 I=1,12
-        U(I)=U(I)+DISL3/PI2*DU(I)
+    if(disl3/=F0) then
+      du( 1)= q*qY              -alp(3)*AI3*sd*sd
+      du( 2)= q*qX              +alp(3)*xi/Rd*sd*sd
+      du( 3)= et*qX+xi*qY-THETA -alp(3)*AI4*sd*sd
+      du( 4)=-xi*q2*Y32 -alp(3)*AJ4*sd*sd
+      du( 5)=-q2/R3     -alp(3)*AJ5*sd*sd
+      du( 6)= q*q2*Y32  -alp(3)*AJ6*sd*sd
+      du( 7)= q*FY -alp(3)*AJ1*sd*sd
+      du( 8)= q*GY -alp(3)*AJ2*sd*sd
+      du( 9)=-q*HY -alp(3)*AJ3*sd*sd
+      du(10)= q*FZ +alp(3)*AK3*sd*sd
+      du(11)= q*GZ +alp(3)*xi*D11*sd*sd
+      du(12)=-q*HZ +alp(3)*AK4*sd*sd
+      do 444 i=1,12
+        u(i)=u(i)+disl3/pi2*du(i)
  444  enddo
     endif
     return
-end subroutine UB
+end subroutine uB
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  UC(XI,ET,Q,Z,DISL1,DISL2,DISL3,KXI,KET,SD,CD,ALP,U)
+subroutine  uC(xi,et,q,z,disl1,disl2,disl3,kxi,ket,sd,cd,alp,u)
 !********************************************************************
-!*****    DISPLACEMENT AND STRAIN AT DEPTH (PART-C)             *****
-!*****    DUE TO BURIED FINITE FAULT IN A SEMIINFINITE MEDIUM   *****
+!*****    displacement and strain at depth (part-C)             *****
+!*****    due to buried finite fault in a semi-infinite medium  *****
 !********************************************************************
 !
-!***** INPUT
-!*****   XI,ET,Q,Z   : STATION COORDINATES IN FAULT SYSTEM
-!*****   DISL1-DISL3 : STRIKE-, DIP-, TENSILE-DISLOCATIONS
-!*****   KXI,KET     : KXI=1, KET=1 MEANS R+XI<EPS, R+ET<EPS, RESPECTIVELY
-!*****   SD,CD       : SIN, COS OF DIP-ANGLE
-!*****   ALP         : COEFFICIENTS RELATED TO ALPHA VALUE
-!***** OUTPUT
-!*****   U(12) : DISPLACEMENT AND THEIR DERIVATIVES
+!***** input
+!*****   xi,et,q,z   : station coordinates in fault system
+!*****   disl1-disl3 : strike-, dip-, tensile-dislocations
+!*****   kxi,ket     : kxi=1, ket=1 means R+xi<eps, R+et<eps, respectively
+!*****   sd,cd       : sin, cos of dip-angle
+!*****   alp         : coefficients related to alpha value
+!***** output
+!*****   u(12) : displacement and their derivatives
     implicit none
     ! arguments
-    real*8, intent(in) :: XI,ET,Z,Q,DISL1,DISL2,DISL3
-    integer, intent(in) :: KXI,KET
-    real*8, intent(in) :: SD,CD
-    real*8, intent(in) :: ALP(5)
-    real*8, intent(out) :: U(12)
+    real*8, intent(in) :: xi,et,z,q,disl1,disl2,disl3
+    integer, intent(in) :: kxi,ket
+    real*8, intent(in) :: sd,cd
+    real*8, intent(in) :: alp(5)
+    real*8, intent(out) :: u(12)
     ! local variables
-    real*8 :: DU(12)
-    real*8 :: R,Ytilde,Dtilde
+    real*8 :: du(12)
+    real*8 :: R,ytilde,dtilde
     real*8 :: X11,Y11,X32,Y32
-    real*8 :: XY,QX,QY
-    real*8 :: XI2,ET2,Q2
+    real*8 :: xy,qX,qY
+    real*8 :: xi2,ET2,q2
     real*8 :: R2,R3,R5
     real*8 :: C
     real*8 :: X53,Y53,Z32,Z53,H
     real*8 :: Y0,Z0
     real*8 :: PPY,PPZ
-    real*8 :: QQ,QQY,QQZ,QR,CQX,CDR,YY0
+    real*8 :: QQ,QQY,QQZ,qR,CqX,CDR,YY0
     ! parameters
     real*8, parameter :: F0=0.0d0, F1=1.0d0, F2=2.0d0, F3=3.0d0
-    real*8, parameter :: PI2=6.283185307179586d0
+    real*8, parameter :: pi2=6.283185307179586d0
     ! loop counter
-    integer :: I
+    integer :: i
 
-    U(1:12) = 0.0d0
-    DU(1:12) = 0.0d0
+    u(1:12) = 0.0d0
+    du(1:12) = 0.0d0
 
-    call DCCON2(XI,ET,Q,SD,CD,R,Ytilde,Dtilde)
-    call eq14_xy(XI,ET,KXI,KET,R,X11,X32,Y11,Y32)
+    call dccon2(xi,et,q,sd,cd,R,ytilde,dtilde)
+    call eq14_xy(xi,et,kxi,ket,R,X11,X32,Y11,Y32)
 
     R2=R**2.0d0
     R3=R**3.0d0
     R5=R**5.0d0
-    XI2=XI*XI
-    ET2=ET*ET
-    Q2=Q*Q
+    xi2=xi*xi
+    ET2=et*et
+    q2=q*q
 !-----
-    C=Dtilde+Z
-    X53=(8.D0*R2+9.D0*R*XI+F3*XI2)*X11*X11*X11/R2
-    Y53=(8.D0*R2+9.D0*R*ET+F3*ET2)*Y11*Y11*Y11/R2
-    H=Q*CD-Z
-    Z32=SD/R3-H*Y32
-    Z53=F3*SD/R5-H*Y53
-    Y0=Y11-XI2*Y32
-    Z0=Z32-XI2*Z53
-    PPY=CD/R3+Q*Y32*SD
-    PPZ=SD/R3-Q*Y32*CD
-    QQ=Z*Y32+Z32+Z0
-    QQY=F3*C*Dtilde/R5-QQ*SD
-    QQZ=F3*C*Ytilde/R5-QQ*CD+Q*Y32
-    XY=XI*Y11
-    QX=Q*X11
-    QY=Q*Y11
-    QR=F3*Q/R5
-    CQX=C*Q*X53
-    CDR=(C+Dtilde)/R3
-    YY0=Ytilde/R3-Y0*CD
+    C=dtilde+z
+    X53=(8.d0*R2+9.d0*R*xi+F3*xi2)*X11*X11*X11/R2
+    Y53=(8.d0*R2+9.d0*R*et+F3*ET2)*Y11*Y11*Y11/R2
+    H=q*cd-z
+    Z32=sd/R3-H*Y32
+    Z53=F3*sd/R5-H*Y53
+    Y0=Y11-xi2*Y32
+    Z0=Z32-xi2*Z53
+    PPY=cd/R3+q*Y32*sd
+    PPZ=sd/R3-q*Y32*cd
+    QQ=z*Y32+Z32+Z0
+    QQY=F3*C*dtilde/R5-QQ*sd
+    QQZ=F3*C*ytilde/R5-QQ*cd+q*Y32
+    xy=xi*Y11
+    qX=q*X11
+    qY=q*Y11
+    qR=F3*q/R5
+    CqX=C*q*X53
+    CDR=(C+dtilde)/R3
+    YY0=ytilde/R3-Y0*cd
 !=====
 !======================================
-!=====  STRIKE-SLIP CONTRIBUTION  =====
+!=====  strike-slip contribution  =====
 !======================================
-    if(DISL1/=F0) then
-      DU( 1)= ALP(4)*XY*CD           -ALP(5)*XI*Q*Z32
-      DU( 2)= ALP(4)*(CD/R+F2*QY*SD) -ALP(5)*C*Q/R3
-      DU( 3)= ALP(4)*QY*CD           -ALP(5)*(C*ET/R3-Z*Y11+XI2*Z32)
-      DU( 4)= ALP(4)*Y0*CD                  -ALP(5)*Q*Z0
-      DU( 5)=-ALP(4)*XI*(CD/R3+F2*Q*Y32*SD) +ALP(5)*C*XI*QR
-      DU( 6)=-ALP(4)*XI*Q*Y32*CD  +ALP(5)*XI*(F3*C*ET/R5-QQ)
-      DU( 7)=-ALP(4)*XI*PPY*CD    -ALP(5)*XI*QQY
-      DU( 8)= ALP(4)*F2*(Dtilde/R3-Y0*SD)*SD-Ytilde/R3*CD &
-             -ALP(5)*(CDR*SD-ET/R3-C*Ytilde*QR)
-      DU( 9)=-ALP(4)*Q/R3+YY0*SD  +ALP(5)*(CDR*CD+C*Dtilde*QR-(Y0*CD+Q*Z0)*SD)
-      DU(10)= ALP(4)*XI*PPZ*CD    -ALP(5)*XI*QQZ
-      DU(11)= ALP(4)*F2*(Ytilde/R3-Y0*CD)*SD+Dtilde/R3*CD -ALP(5)*(CDR*CD+C*Dtilde*QR)
-      DU(12)=        YY0*CD    -ALP(5)*(CDR*SD-C*Ytilde*QR-Y0*SD*SD+Q*Z0*CD)
-      do 222 I=1,12
-        U(I)=U(I)+DISL1/PI2*DU(I)
+    if(disl1/=F0) then
+      du( 1)= alp(4)*xy*cd           -alp(5)*xi*q*Z32
+      du( 2)= alp(4)*(cd/R+F2*qY*sd) -alp(5)*C*q/R3
+      du( 3)= alp(4)*qY*cd           -alp(5)*(C*et/R3-z*Y11+xi2*Z32)
+      du( 4)= alp(4)*Y0*cd                  -alp(5)*q*Z0
+      du( 5)=-alp(4)*xi*(cd/R3+F2*q*Y32*sd) +alp(5)*C*xi*qR
+      du( 6)=-alp(4)*xi*q*Y32*cd  +alp(5)*xi*(F3*C*et/R5-QQ)
+      du( 7)=-alp(4)*xi*PPY*cd    -alp(5)*xi*QQY
+      du( 8)= alp(4)*F2*(dtilde/R3-Y0*sd)*sd-ytilde/R3*cd &
+             -alp(5)*(CDR*sd-et/R3-C*ytilde*qR)
+      du( 9)=-alp(4)*q/R3+YY0*sd  +alp(5)*(CDR*cd+C*dtilde*qR-(Y0*cd+q*Z0)*sd)
+      du(10)= alp(4)*xi*PPZ*cd    -alp(5)*xi*QQZ
+      du(11)= alp(4)*F2*(ytilde/R3-Y0*cd)*sd+dtilde/R3*cd -alp(5)*(CDR*cd+C*dtilde*qR)
+      du(12)=        YY0*cd    -alp(5)*(CDR*sd-C*ytilde*qR-Y0*sd*sd+q*Z0*cd)
+      do 222 i=1,12
+        u(i)=u(i)+disl1/pi2*du(i)
  222  enddo
     endif
 !======================================
-!=====    DIP-SLIP CONTRIBUTION   =====
+!=====    dip-slip contribution   =====
 !======================================
-    if(DISL2/=F0) then
-      DU( 1)= ALP(4)*CD/R -QY*SD      -ALP(5)*C*Q/R3
-      DU( 2)= ALP(4)*Ytilde*X11       -ALP(5)*C*ET*Q*X32
-      DU( 3)=       -Dtilde*X11-XY*SD -ALP(5)*C*(X11-Q2*X32)
-      DU( 4)=-ALP(4)*XI/R3*CD         +ALP(5)*C*XI*QR +XI*Q*Y32*SD
-      DU( 5)=-ALP(4)*Ytilde/R3        +ALP(5)*C*ET*QR
-      DU( 6)=        Dtilde/R3-Y0*SD  +ALP(5)*C/R3*(F1-F3*Q2/R2)
-      DU( 7)=-ALP(4)*ET/R3+Y0*SD*SD   -ALP(5)*(CDR*SD-C*Ytilde*QR)
-      DU( 8)= ALP(4)*(X11-Ytilde*Ytilde*X32) -ALP(5)*C*((Dtilde+F2*Q*CD)*X32-Ytilde*ET*Q*X53)
-      DU( 9)=   XI*PPY*SD+Ytilde*Dtilde*X32  +ALP(5)*C*((Ytilde+F2*Q*SD)*X32-Ytilde*Q2*X53)
-      DU(10)=   -Q/R3+Y0*SD*CD               -ALP(5)*(CDR*CD+C*Dtilde*QR)
-      DU(11)= ALP(4)*Ytilde*Dtilde*X32       -ALP(5)*C*((Ytilde-F2*Q*SD)*X32+Dtilde*ET*Q*X53)
-      DU(12)=-XI*PPZ*SD+X11-Dtilde*Dtilde*X32-ALP(5)*C*((Dtilde-F2*Q*CD)*X32-Dtilde*Q2*X53)
-      do 333 I=1,12
-        U(I)=U(I)+DISL2/PI2*DU(I)
+    if(disl2/=F0) then
+      du( 1)= alp(4)*cd/R -qY*sd      -alp(5)*C*q/R3
+      du( 2)= alp(4)*ytilde*X11       -alp(5)*C*et*q*X32
+      du( 3)=       -dtilde*X11-xy*sd -alp(5)*C*(X11-q2*X32)
+      du( 4)=-alp(4)*xi/R3*cd         +alp(5)*C*xi*qR +xi*q*Y32*sd
+      du( 5)=-alp(4)*ytilde/R3        +alp(5)*C*et*qR
+      du( 6)=        dtilde/R3-Y0*sd  +alp(5)*C/R3*(F1-F3*q2/R2)
+      du( 7)=-alp(4)*et/R3+Y0*sd*sd   -alp(5)*(CDR*sd-C*ytilde*qR)
+      du( 8)= alp(4)*(X11-ytilde*ytilde*X32) -alp(5)*C*((dtilde+F2*q*cd)*X32-ytilde*et*q*X53)
+      du( 9)=   xi*PPY*sd+ytilde*dtilde*X32  +alp(5)*C*((ytilde+F2*q*sd)*X32-ytilde*q2*X53)
+      du(10)=   -q/R3+Y0*sd*cd               -alp(5)*(CDR*cd+C*dtilde*qR)
+      du(11)= alp(4)*ytilde*dtilde*X32       -alp(5)*C*((ytilde-F2*q*sd)*X32+dtilde*et*q*X53)
+      du(12)=-xi*PPZ*sd+X11-dtilde*dtilde*X32-alp(5)*C*((dtilde-F2*q*cd)*X32-dtilde*q2*X53)
+      do 333 i=1,12
+        u(i)=u(i)+disl2/pi2*du(i)
  333  enddo
     endif
 !========================================
-!=====  TENSILE-FAULT CONTRIBUTION  =====
+!=====  tensile-fault contribution  =====
 !========================================
-    if(DISL3/=F0) then
-      DU( 1)=-ALP(4)*(SD/R+QY*CD)        -ALP(5)*(Z*Y11-Q2*Z32)
-      DU( 2)= ALP(4)*F2*XY*SD+Dtilde*X11 -ALP(5)*C*(X11-Q2*X32)
-      DU( 3)= ALP(4)*(Ytilde*X11+XY*CD)  +ALP(5)*Q*(C*ET*X32+XI*Z32)
-      DU( 4)= ALP(4)*XI/R3*SD+XI*Q*Y32*CD+ALP(5)*XI*(F3*C*ET/R5-F2*Z32-Z0)
-      DU( 5)= ALP(4)*F2*Y0*SD-Dtilde/R3  +ALP(5)*C/R3*(F1-F3*Q2/R2)
-      DU( 6)=-ALP(4)*YY0                 -ALP(5)*(C*ET*QR-Q*Z0)
-      DU( 7)= ALP(4)*(Q/R3+Y0*SD*CD)     +ALP(5)*(Z/R3*CD+C*Dtilde*QR-Q*Z0*SD)
-      DU( 8)=-ALP(4)*F2*XI*PPY*SD-Ytilde*Dtilde*X32 &
-             +ALP(5)*C*((Ytilde+F2*Q*SD)*X32-Ytilde*Q2*X53)
-      DU( 9)=-ALP(4)*(XI*PPY*CD-X11+Ytilde*Ytilde*X32) &
-             +ALP(5)*(C*((Dtilde+F2*Q*CD)*X32-Ytilde*ET*Q*X53)+XI*QQY)
-      DU(10)=  -ET/R3+Y0*CD*CD           -ALP(5)*(Z/R3*SD-C*Ytilde*QR-Y0*SD*SD+Q*Z0*CD)
-      DU(11)= ALP(4)*F2*XI*PPZ*SD-X11+Dtilde*Dtilde*X32 &
-             -ALP(5)*C*((Dtilde-F2*Q*CD)*X32-Dtilde*Q2*X53)
-      DU(12)= ALP(4)*(XI*PPZ*CD+Ytilde*Dtilde*X32) &
-             +ALP(5)*(C*((Ytilde-F2*Q*SD)*X32+Dtilde*ET*Q*X53)+XI*QQZ)
-      do 444 I=1,12
-        U(I)=U(I)+DISL3/PI2*DU(I)
+    if(disl3/=F0) then
+      du( 1)=-alp(4)*(sd/R+qY*cd)        -alp(5)*(z*Y11-q2*Z32)
+      du( 2)= alp(4)*F2*xy*sd+dtilde*X11 -alp(5)*C*(X11-q2*X32)
+      du( 3)= alp(4)*(ytilde*X11+xy*cd)  +alp(5)*q*(C*et*X32+xi*Z32)
+      du( 4)= alp(4)*xi/R3*sd+xi*q*Y32*cd+alp(5)*xi*(F3*C*et/R5-F2*Z32-Z0)
+      du( 5)= alp(4)*F2*Y0*sd-dtilde/R3  +alp(5)*C/R3*(F1-F3*q2/R2)
+      du( 6)=-alp(4)*YY0                 -alp(5)*(C*et*qR-q*Z0)
+      du( 7)= alp(4)*(q/R3+Y0*sd*cd)     +alp(5)*(z/R3*cd+C*dtilde*qR-q*Z0*sd)
+      du( 8)=-alp(4)*F2*xi*PPY*sd-ytilde*dtilde*X32 &
+             +alp(5)*C*((ytilde+F2*q*sd)*X32-ytilde*q2*X53)
+      du( 9)=-alp(4)*(xi*PPY*cd-X11+ytilde*ytilde*X32) &
+             +alp(5)*(C*((dtilde+F2*q*cd)*X32-ytilde*et*q*X53)+xi*QQY)
+      du(10)=  -et/R3+Y0*cd*cd           -alp(5)*(z/R3*sd-C*ytilde*qR-Y0*sd*sd+q*Z0*cd)
+      du(11)= alp(4)*F2*xi*PPZ*sd-X11+dtilde*dtilde*X32 &
+             -alp(5)*C*((dtilde-F2*q*cd)*X32-dtilde*q2*X53)
+      du(12)= alp(4)*(xi*PPZ*cd+ytilde*dtilde*X32) &
+             +alp(5)*(C*((ytilde-F2*q*sd)*X32+dtilde*et*q*X53)+xi*QQZ)
+      do 444 i=1,12
+        u(i)=u(i)+disl3/pi2*du(i)
  444  enddo
     endif
     return
-end subroutine UC
+end subroutine uC
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  DCCON0(DIP,SD,CD)
+subroutine  dccon0(dip,sd,cd)
 !*******************************************************************
-!*****   CALCULATE MEDIUM CONSTANTS AND FAULT-DIP CONSTANTS    *****
+!*****   calculate medium constants and fault-dip constants    *****
 !*******************************************************************
 !
-!***** INPUT
-!*****   DIP   : DIP-ANGLE (DEGREE)
-!***** OUTPUT
-!*****   SD,CD : SIN, COS OF DIP-ANGLE
+!***** input
+!*****   dip   : dip-angle (degree)
+!***** output
+!*****   sd,cd : sin, cos of dip-angle
     implicit none
-    real*8, intent(in) :: DIP
-    real*8, intent(out) :: SD,CD
+    real*8, intent(in) :: dip
+    real*8, intent(out) :: sd,cd
 
     real*8, parameter :: F0=0.0d0, F1=1.0d0
-    real*8, parameter :: PI2=6.283185307179586d0
-    real*8, parameter :: EPS=1.0d-6
-    real*8, parameter :: P18=PI2/360.D0
+    real*8, parameter :: pi2=6.283185307179586d0
+    real*8, parameter :: eps=1.0d-6
+    real*8, parameter :: p18=pi2/360.d0
 !-----
-    SD=DSIN(DIP*P18)
-    CD=DCOS(DIP*P18)
-!### CAUTION ### if COS(DIP) IS SUFFICIENTLY SMALL, IT IS SET TO ZERO
-    if(dabs(CD)<EPS) then
-      CD=F0
-      if(SD>F0) SD= F1
-      if(SD<F0) SD=-F1
+    sd=dsin(dip*p18)
+    cd=dcos(dip*p18)
+!### caution ### if cos(dip) is sufficiently small, it is set to zero
+    if(dabs(cd)<eps) then
+      cd=F0
+      if(sd>F0) sd= F1
+      if(sd<F0) sd=-F1
     endif
     return
-end subroutine DCCON0
+end subroutine dccon0
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  DCCON1(X,Y,D,SD,CD,R,P,Q,S,T)
+subroutine  dccon1(x,y,d,sd,cd,R,p,q,s,t)
 !**********************************************************************
-!*****   CALCULATE STATION GEOMETRY CONSTANTS FOR POINT SOURCE    *****
+!*****   calculate station geometry constants for point source    *****
 !**********************************************************************
-!***** INPUT
-!*****   X,Y,D : STATION COORDINATES IN FAULT SYSTEM
-!*****   SD,CD : SIN, COS OF DIP-ANGLE
+!***** input
+!*****   x,y,d : station coordinates in fault system
+!*****   sd,cd : sin, cos of dip-angle
     implicit none
-    real*8, intent(in) :: X,Y,D
-    real*8, intent(in) :: SD,CD
+    real*8, intent(in) :: x,y,d
+    real*8, intent(in) :: sd,cd
     real*8, intent(out) :: R
-    real*8, intent(out) :: P,Q,S,T
+    real*8, intent(out) :: p,q,s,t
 !-----
-    P=Y*CD+D*SD
-    Q=Y*SD-D*CD
-    S=P*SD+Q*CD
-    T=P*CD-Q*SD
-    R=dsqrt(X*X+Y*Y+D*D)
+    p=y*cd+d*sd
+    q=y*sd-d*cd
+    s=p*sd+q*cd
+    t=p*cd-q*sd
+    R=dsqrt(x*x+y*y+d*d)
     return
-end subroutine DCCON1
+end subroutine dccon1
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine  DCCON2(XI,ET,Q,SD,CD,R,Ytilde,Dtilde)
+subroutine  dccon2(xi,et,q,sd,cd,R,ytilde,dtilde)
 !**********************************************************************
-!*****   CALCULATE STATION GEOMETRY CONSTANTS FOR FINITE SOURCE   *****
+!*****   calculate station geometry constants for finite source   *****
 !**********************************************************************
-!***** INPUT
-!*****   XI,ET,Q : STATION COORDINATES IN FAULT SYSTEM
-!*****   SD,CD   : SIN, COS OF DIP-ANGLE
+!***** input
+!*****   xi,et,q : station coordinates in fault system
+!*****   sd,cd   : sin, cos of dip-angle
     implicit none
-    real*8, intent(in) :: XI,ET,Q
-    real*8, intent(in) :: SD,CD
-    real*8, intent(out) :: R,Ytilde,Dtilde
+    real*8, intent(in) :: xi,et,q
+    real*8, intent(in) :: sd,cd
+    real*8, intent(out) :: R,ytilde,dtilde
 !-----
-    R = dsqrt(XI*XI+ET*ET+Q*Q)
-    Ytilde = ET*CD+Q*SD
-    Dtilde = ET*SD-Q*CD
+    R = dsqrt(xi*xi+et*et+q*q)
+    ytilde = et*cd+q*sd
+    dtilde = et*sd-q*cd
     return
-end subroutine DCCON2
+end subroutine dccon2
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine math_singularity(XI,ET,Q,R,KXI,KET,THETA,ALX,ALE)
-!***** INPUT
-!*****   XI,ET,Q : STATION COORDINATES IN FAULT SYSTEM
-!*****   KXI,KET : KXI=1, KET=1 MEANS R+XI<EPS, R+ET<EPS, RESPECTIVELY
+subroutine math_singularity(xi,et,q,R,kxi,ket,THETA,ALX,ALE)
+!***** input
+!*****   xi,et,q : station coordinates in fault system
+!*****   kxi,ket : kxi=1, ket=1 means R+xi<eps, R+et<eps, respectively
     implicit none
-    real*8, intent(in) :: XI,ET,Q,R
-    integer, intent(in) :: KXI,KET
+    real*8, intent(in) :: xi,et,q,R
+    integer, intent(in) :: kxi,ket
     real*8, intent(out) :: THETA,ALX,ALE
 
     ! p.1034 (i)
-    if(Q==0.0d0) then
+    if(q==0.0d0) then
       THETA=0.0d0
     else
-      THETA=datan(XI*ET/(Q*R))
+      THETA=datan(xi*et/(q*R))
     endif
     ! p.1034 (iii)
-    if(KXI==1) then
-      ALX=-dlog(R-XI)
+    if(kxi==1) then
+      ALX=-dlog(R-xi)
     else
-      ALX=dlog(R+XI)
+      ALX=dlog(R+xi)
     endif
     ! p.1034 (iv)
-    if(KET==1) then
-      ALE=-dlog(R-ET)
+    if(ket==1) then
+      ALE=-dlog(R-et)
     else
-      ALE=dlog(R+ET)
+      ALE=dlog(R+et)
     endif
 
     return
@@ -1337,13 +1337,13 @@ end subroutine math_singularity
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine eq14_xy(XI,ET,KXI,KET,R,X11,X32,Y11,Y32)
-!***** INPUT
-!*****   XI,ET   : STATION COORDINATES IN FAULT SYSTEM
-!*****   KXI,KET : KXI=1, KET=1 MEANS R+XI<EPS, R+ET<EPS, RESPECTIVELY
+subroutine eq14_xy(xi,et,kxi,ket,R,X11,X32,Y11,Y32)
+!***** input
+!*****   xi,et   : station coordinates in fault system
+!*****   kxi,ket : kxi=1, ket=1 means R+xi<eps, R+et<eps, respectively
     implicit none
-    real*8, intent(in) :: XI,ET
-    integer, intent(in) :: KXI,KET
+    real*8, intent(in) :: xi,et
+    integer, intent(in) :: kxi,ket
     real*8, intent(in) :: R
     real*8, intent(out) :: X11,X32,Y11,Y32
 
@@ -1352,14 +1352,14 @@ subroutine eq14_xy(XI,ET,KXI,KET,R,X11,X32,Y11,Y32)
     Y11 = 0.0d0
     Y32 = 0.0d0
 !-----
-    if(KXI/=1) then
-      X11=1.0d0/(R*(R+XI))        ! Eq.(14), p.1026
-      X32=(2.0d0*R+XI)*X11*X11/R  ! Eq.(14), p.1026
+    if(kxi/=1) then
+      X11=1.0d0/(R*(R+xi))        ! Eq.(14), p.1026
+      X32=(2.0d0*R+xi)*X11*X11/R  ! Eq.(14), p.1026
     endif
 !-----
-    if(KET/=1) then
-      Y11=1.0d0/(R*(R+ET))        ! Eq.(14), p.1026
-      Y32=(2.0d0*R+ET)*Y11*Y11/R  ! Eq.(14), p.1026
+    if(ket/=1) then
+      Y11=1.0d0/(R*(R+et))        ! Eq.(14), p.1026
+      Y32=(2.0d0*R+et)*Y11*Y11/R  ! Eq.(14), p.1026
     endif
 !-----
     return
@@ -1367,67 +1367,67 @@ end subroutine eq14_xy
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine auxvar_derivative_yz(XI,Q,SD,CD,R,Ytilde,Dtilde,X11,X32,Y32, &
+subroutine auxvar_derivative_yz(xi,q,sd,cd,R,ytilde,dtilde,X11,X32,Y32, &
                                 EY,EZ,FY,FZ,GY,GZ,HY,HZ)
-!***** INPUT
-!*****   XI,Q  : STATION COORDINATES IN FAULT SYSTEM
-!*****   SD,CD : SIN, COS OF DIP-ANGLE
+!***** input
+!*****   xi,q  : station coordinates in fault system
+!*****   sd,cd : sin, cos of dip-angle
     implicit none
     ! arguments
-    real*8, intent(in) :: XI,Q,SD,CD,R,Ytilde,Dtilde
+    real*8, intent(in) :: xi,q,sd,cd,R,ytilde,dtilde
     real*8, intent(in) :: X11,X32,Y32
     real*8, intent(out) :: EY,EZ,FY,FZ,GY,GZ,HY,HZ
     ! local variables
     real*8 :: R3
     R3 = R**3.0d0
 
-    EY=SD/R-Ytilde*Q/R3           ! E  in Tab.8, p.1032
-    EZ=CD/R+Dtilde*Q/R3           ! E' in Tab.9, p.1033
-    FY=Dtilde/R3+XI*XI*Y32*SD     ! F  in Tab.8, p.1032
-    FZ=Ytilde/R3+XI*XI*Y32*CD     ! F' in Tab.9, p.1033
-    GY=2.0d0*X11*SD-Ytilde*Q*X32  ! G  in Tab.8, p.1032
-    GZ=2.0d0*X11*CD+Dtilde*Q*X32  ! G' in Tab.9, p.1033
-    HY=Dtilde*Q*X32+XI*Q*Y32*SD   ! H  in Tab.8, p.1032
-    HZ=Ytilde*Q*X32+XI*Q*Y32*CD   ! H' in Tab.9, p.1033
+    EY=sd/R-ytilde*q/R3           ! E  in Tab.8, p.1032
+    EZ=cd/R+dtilde*q/R3           ! E' in Tab.9, p.1033
+    FY=dtilde/R3+xi*xi*Y32*sd     ! F  in Tab.8, p.1032
+    FZ=ytilde/R3+xi*xi*Y32*cd     ! F' in Tab.9, p.1033
+    GY=2.0d0*X11*sd-ytilde*q*X32  ! G  in Tab.8, p.1032
+    GZ=2.0d0*X11*cd+dtilde*q*X32  ! G' in Tab.9, p.1033
+    HY=dtilde*q*X32+xi*q*Y32*sd   ! H  in Tab.8, p.1032
+    HZ=ytilde*q*X32+xi*q*Y32*cd   ! H' in Tab.9, p.1033
     return
 end subroutine auxvar_derivative_yz
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine assign_alpha(ALPHA,ALP)
-!***** INPUT
-!*****   ALPHA : MEDIUM CONSTANT  (LAMBDA+MYU)/(LAMBDA+2*MYU)
-!***** OUTPUT
-!*****   ALP   : COEFFICIENTS RELATED TO ALPHA VALUE
+subroutine assign_alpha(alpha,alp)
+!***** input
+!*****   alpha : medium constant  (lambda+myu)/(lambda+2*myu)
+!***** output
+!*****   alp   : coefficients related to alpha value
     implicit none
-    real*8, intent(in) :: ALPHA
-    real*8, intent(out) :: ALP(5)
-    ALP(1)=(1.0d0-ALPHA)/2.0d0
-    ALP(2)= ALPHA/2.0d0
-    ALP(3)=(1.0d0-ALPHA)/ALPHA
-    ALP(4)=1.0d0-ALPHA
-    ALP(5)=ALPHA
+    real*8, intent(in) :: alpha
+    real*8, intent(out) :: alp(5)
+    alp(1)=(1.0d0-alpha)/2.0d0
+    alp(2)= alpha/2.0d0
+    alp(3)=(1.0d0-alpha)/alpha
+    alp(4)=1.0d0-alpha
+    alp(5)=alpha
     return
 end subroutine assign_alpha
 !----------------------------------------------------------------------
 
 !----------------------------------------------------------------------
-subroutine varout(U,UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ)
+subroutine varout(u,ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz)
     implicit none
-    real*8, intent(in) :: U(12)
-    real*8, intent(out) :: UX,UY,UZ,UXX,UYX,UZX,UXY,UYY,UZY,UXZ,UYZ,UZZ
-    UX=U(1)
-    UY=U(2)
-    UZ=U(3)
-    UXX=U(4)
-    UYX=U(5)
-    UZX=U(6)
-    UXY=U(7)
-    UYY=U(8)
-    UZY=U(9)
-    UXZ=U(10)
-    UYZ=U(11)
-    UZZ=U(12)
+    real*8, intent(in) :: u(12)
+    real*8, intent(out) :: ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz
+    ux=u(1)
+    uy=u(2)
+    uz=u(3)
+    uxx=u(4)
+    uyx=u(5)
+    uzx=u(6)
+    uxy=u(7)
+    uyy=u(8)
+    uzy=u(9)
+    uxz=u(10)
+    uyz=u(11)
+    uzz=u(12)
     return
 end subroutine varout
 !----------------------------------------------------------------------
