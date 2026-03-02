@@ -612,12 +612,12 @@ subroutine DC3D(alpha,x,y,z,depth,dip, &
 !*****                                                          *****
 !*****    displacement and strain at depth                      *****
 !*****    due to buried finite fault in a semi-infinite medium  *****
-!*****              CODED BY  y.OKADA ... SEP.1991              *****
-!*****              REVISED ... NOV.1991, APR.1992, MAY.1993,   *****
-!*****                          JUL.1993, MAY.2002              *****
+!*****             coded by  Y. Okada ... Sep. 1991             *****
+!*****             revised ... Nov. 1991, Apr. 1992, May. 1993, *****
+!*****                         Jul. 1993, May. 2002             *****
 !--------------------------------------------------------------------
 !-----                     converted to Fortran90 (free form)   -----
-!-----                                t. Miyashita, Jan. 2020   -----
+!-----                                T. Miyashita, Jan. 2020   -----
 !--------------------------------------------------------------------
 !********************************************************************
 !

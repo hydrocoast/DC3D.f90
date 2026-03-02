@@ -4,7 +4,7 @@
 program test
     implicit none
 
-    reAL(8) :: x, y, z, depth, dip, AL1, AL2, AW1, AW2, disl1, disl2, disl3, ALpha
+    reAL(8) :: x, y, z, depth, dip, AL1, AL2, AW1, AW2, disl1, disl2, disl3, alpha
     reAL(8) :: ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz
     integer :: iret
 
@@ -31,8 +31,8 @@ program test
     write(*,'(a,4(f8.2,","))') 'disl1, disl2, disl3 =',disl1,disl2,disl3
     write(*,'(3(a,f8.2,","))') 'x =',x,' y =',y,' z =',z
     !-----
-    ALpha=2.0d0/3.0d0
-    cALl DC3D(ALpha,x,y,z,depth,dip, &
+    alpha=2.0d0/3.0d0
+    call DC3D(alpha,x,y,z,depth,dip, &
               AL1,AL2,AW1,AW2,disl1,disl2,disl3, &
               ux,uy,uz,uxx,uyx,uzx,uxy,uyy,uzy,uxz,uyz,uzz,iret)
     write(*,*)
